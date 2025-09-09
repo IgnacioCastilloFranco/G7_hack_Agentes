@@ -79,12 +79,14 @@ class RatoncitoAgent:
             memory=self.memory,
             verbose=settings.AGENT_VERBOSE,
             max_iterations=settings.AGENT_MAX_ITERATIONS,
-            handle_parsing_errors=True
-        )
+            handle_parsing_errors=True,
+            early_stopping_method="generate",  
+            return_intermediate_steps=False
+            )
     
     # Herramientas del Ratoncito Pérez
     def magical_greeting(self, input_text: str="") -> str:
-        return "¡Por mis bigotitos! ¡Hola, pequeños aventureros! 🐭✨"
+        return "¡Por mis bigotitos! ¡Hola, pequeños aventureros! Soy el Ratoncito Pérez, guardián mágico de Madrid. 🐭✨"
         # greetings = [
         #     "¡Hola, aventureros! 🐭✨ Soy el Ratoncito Pérez y estoy aquí para mostrarles los secretos mágicos de Madrid. ¿Están listos para una aventura increíble?",
         #     "¡Por mis bigotitos! ¡Qué alegría conoceros! 🎭 Soy el guardián de las historias más fantásticas de Madrid. ¿Me acompañáis en esta aventura mágica?",
@@ -110,19 +112,30 @@ class RatoncitoAgent:
     # Método principal para chatear con el agente
     def chat(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         try:
-            result = self.agent_executor.invoke({"input": message})
-            return {
-                "response": result["output"],
-                "success": True
-            }
+            result = self.agent_executor.invoke({
+                "input": message
+            })
+            
+            if "output" in result and result["output"]:
+                print("✅ ReAct exitoso")
+                return {
+                    "response": result["output"],
+                    "success": True,
+                    "approach": "react_success"
+                }
+            else:
+                print("⚠️ ReAct sin respuesta clara, usando fallback directo")
+                raise ValueError("ReAct sin respuesta clara")
+                
         except Exception as e:
             print(f"❌ Error en ReAct: {str(e)}")
+            print("🔄 Usando respuesta directa en español")
             
             response = self._direct_spanish_response(message)
             return {
                 "response": response,
-                "success": True,  
-                "failsafe_used": True
+                "success": True,
+                "approach": "direct_fallback"
             }
         
     def _direct_spanish_response(self, message: str) -> str:

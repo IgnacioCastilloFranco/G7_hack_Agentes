@@ -46,14 +46,14 @@ async def chat_with_react_agent(request: ChatRequest):
             
         # Obtenemos respuesta
         result = agent.chat(request.message, context)
-        
+        is_fallback = result.get("approach", "") == "direct_fallback"
         return {
             "response": result.get("response", "¡Por mis bigotitos! Ha ocurrido algo mágico e inesperado."),
             "success": result.get("success", False),
-            "agent_type": "react",
+            "agent_type": "react" if not is_fallback else "react_fallback",
             "extra_info": {
-                "model_used": result.get("model_used", "unknown"),
-                "fallback_used": result.get("fallback_used", False)
+                "approach": result.get("approach", "unknown"),
+                "fallback_used": is_fallback
             }
         }
     except Exception as e:

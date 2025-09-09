@@ -19,7 +19,7 @@ class Settings:
     # Configuración del Agente
     AGENT_TYPE: str = os.getenv("AGENT_TYPE", "react")  
     AGENT_VERBOSE: bool = os.getenv("AGENT_VERBOSE", "true").lower() == "true"
-    AGENT_MAX_ITERATIONS: int = int(os.getenv("AGENT_MAX_ITERATIONS", "2"))
+    AGENT_MAX_ITERATIONS: int = int(os.getenv("AGENT_MAX_ITERATIONS", "3"))
     
     # Configuración del Ratoncito Pérez
     RATONCITO_PERSONALITY: str = os.getenv("RATONCITO_PERSONALITY", "magical_guide")
