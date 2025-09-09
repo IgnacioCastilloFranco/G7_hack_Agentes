@@ -13,7 +13,7 @@ import Footer from './components/Layout/Footer';
 import HomePage from './pages/HomePage';
 import ChatPage from './pages/ChatPage';
 import GamesPage from './pages/GamePage'; 
-//import StoriesPage from './pages/StoriesPage';
+import StoriesPage from './pages/StoriesPage';
 import LocationsPage from './pages/LocationsPage';
 
 function App() {
@@ -28,7 +28,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/games" element={<GamesPage />} />
-              {/* <Route path="/stories" element={<StoriesPage />} /> */}
+              <Route path="/stories" element={<StoriesPage />} />
               <Route path="/locations" element={<LocationsPage />} />
             </Routes>
           </Box>
