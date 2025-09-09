@@ -42,7 +42,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   };
 
   const handlePopularSearch = (searchTerm: string) => {
-    const cleanTerm = searchTerm.replace(/^[🎨👑🌳🏛️☀️🏺🎭🏟️]\s/u, ''); // Remove emoji prefix
+    const cleanTerm = searchTerm.replace(/^[\u{1F3A8}\u{1F451}\u{1F333}\u{1F3DB}\u{2600}\u{1F3FA}\u{1F3AD}\u{1F3DF}]\s/u, ''); // Remove emoji prefix
     setQuery(cleanTerm);
     setError(null);
     onSearch(cleanTerm);

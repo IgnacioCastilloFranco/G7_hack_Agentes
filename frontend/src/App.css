@@ -64,7 +64,55 @@
   backdrop-filter: blur(10px);
 }
 
-/* Responsive Design */
+/* Responsive Design for Large Screens */
+@media (min-width: 1400px) {
+  .app-main {
+    max-width: 1400px;
+    padding: 3rem;
+  }
+  
+  .controls-section,
+  .results-section {
+    padding: 2.5rem;
+  }
+  
+  .app-header {
+    padding: 3rem;
+  }
+  
+  .app-header h1 {
+    font-size: 3rem;
+  }
+  
+  .app-header p {
+    font-size: 1.4rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .app-main {
+    max-width: 1600px;
+    padding: 4rem;
+  }
+  
+  .controls-section,
+  .results-section {
+    padding: 3rem;
+  }
+  
+  .app-header {
+    padding: 4rem;
+  }
+  
+  .app-header h1 {
+    font-size: 3.5rem;
+  }
+  
+  .app-header p {
+    font-size: 1.6rem;
+  }
+}
+
 @media (max-width: 1024px) {
   .app-main {
     padding: 1.5rem;
