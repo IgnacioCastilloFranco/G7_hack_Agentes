@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from app.routes import recommendations, agent_routes
+from app.routes import recommendations, agent_routes, narrative_routes, storytelling
 
 load_dotenv()
 
@@ -23,6 +23,8 @@ app.add_middleware(
 # Rutas principales
 app.include_router(recommendations.router, prefix="/recommend", tags=["Recomendaciones"])
 app.include_router(agent_routes.router, prefix="/ratoncito", tags=["Agentes"])
+app.include_router(narrative_routes.router, prefix="/narrative", tags=["Narrativas"])
+app.include_router(storytelling.router, prefix="/activities", tags=["Actividades"])
 
 @app.get("/")
 def read_root():
