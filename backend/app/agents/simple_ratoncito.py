@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 import random
 import re
 from app.core.config import settings
+from app.services.knowledge import get_retriever
 
 class MagicRatoncitoAgent:
     def __init__(self, personality: str = None):
@@ -21,6 +22,8 @@ class MagicRatoncitoAgent:
         # Base de conocimiento mágica
         self.madrid_knowledge = self._load_madrid_knowledge()
         self.magical_greetings = self._load_magical_greetings()
+        # Retriever de PDFs (Supabase). Si no hay PDFs o falla, será vacío y devolverá nada.
+        self.retriever = get_retriever()
         
         print(f"🐭 Ratoncito Pérez MÁGICO inicializado: {self.personality}")
         print(f"🧠 Modelo: {settings.LLM_MODEL}")
@@ -96,6 +99,17 @@ class MagicRatoncitoAgent:
         return random.choice(self.magical_greetings)
 
     def _get_madrid_info_response(self, place: str) -> str:
+        # Primero intentar buscar en los PDFs
+        try:
+            if self.retriever:
+                docs = self.retriever.get_relevant_documents(place)
+                if docs:
+                    snippet = "\n\n".join((d.page_content or "").strip()[:600] for d in docs[:3])
+                    return snippet
+        except Exception:
+            pass
+
+        # Fallback a conocimiento mágico local
         return self.madrid_knowledge.get(place, self._get_unknown_place_response(place))
 
     def _get_unknown_place_response(self, place: str) -> str:

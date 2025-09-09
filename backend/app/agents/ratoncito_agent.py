@@ -6,6 +6,7 @@ from typing import List, Dict, Any
 import os
 from app.core.config import settings
 from app.utils.ratoncito_prompts import RatoncitoPrompts
+from app.services.knowledge import get_retriever
 import random
 
 # AgentExecutor: Es como el "cerebro ejecutivo" del agente
@@ -28,6 +29,7 @@ class RatoncitoAgent:
         self.personality = personality or settings.RATONCITO_PERSONALITY
         self.llm = self.create_llm()
         self.memory = self.create_memory()
+        self.retriever = get_retriever()
         self.tools = self.create_tools()
         self.agent = self.create_agent()
         self.agent_executor = self.create_agent_executor()
@@ -59,9 +61,9 @@ class RatoncitoAgent:
                 func=self.magical_greeting
             ),
             Tool(
-                name="informacion_madrid",
-                description="Úsala SOLO cuando pregunten sobre lugares específicos de Madrid como Palacio Real, Plaza Mayor, Retiro.",
-                func=self.madrid_info
+                name="buscar_conocimiento",
+                description="Buscar en la base de conocimiento (PDFs del bucket) para responder preguntas.",
+                func=self.search_knowledge
             )
         ]
     
@@ -80,8 +82,9 @@ class RatoncitoAgent:
             verbose=settings.AGENT_VERBOSE,
             max_iterations=settings.AGENT_MAX_ITERATIONS,
             handle_parsing_errors=True,
-            early_stopping_method="generate",  
-            return_intermediate_steps=False
+            early_stopping_method="force",  
+            return_intermediate_steps=False,
+            max_execution_time=settings.AGENT_MAX_EXECUTION_SECONDS
             )
     
     # Herramientas del Ratoncito Pérez
@@ -107,7 +110,25 @@ class RatoncitoAgent:
             if key in place.lower():
                 return info
         return f"¡Qué lugar tan interesante mencionas! Aunque no tengo información específica sobre '{place}', puedo contarte que Madrid está lleno de lugares mágicos. ¿Te gustaría que te hable del Palacio Real o la Plaza Mayor?"
-    
+
+    def search_knowledge(self, query: str) -> str:
+        try:
+            docs = self.retriever.get_relevant_documents(query)
+        except Exception as e:
+            return f"Error al buscar en la base de conocimiento: {str(e)}"
+
+        if not docs:
+            return "No encontré información relevante en los PDFs."
+
+        snippets: List[str] = []
+        for d in docs:
+            text = (d.page_content or "").strip()
+            if text:
+                snippets.append(text[:600])
+            if len(snippets) >= 4:
+                break
+        return "\n\n".join(snippets)
+
 
     # Método principal para chatear con el agente
     def chat(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:

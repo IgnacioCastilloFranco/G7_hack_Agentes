@@ -3,7 +3,12 @@ fastapi
 groq
 httpx
 langchain
+langchain-community
 langchain-core
 langchain-groq
 python-dotenv
+supabase
 uvicorn
+sentence-transformers
+faiss-cpu
+pypdf
