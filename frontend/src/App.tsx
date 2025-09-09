@@ -3,10 +3,10 @@ import './App.css'
 import LocationComponent from './components/LocationComponent'
 import SearchComponent from './components/SearchComponent'
 import SitesList from './components/SitesList'
-import { apiService, type Site } from './services/api'
+import { apiService, type SiteInfo } from './services/api'
 
 function App() {
-  const [sites, setSites] = useState<Site[]>([])
+  const [sites, setSites] = useState<SiteInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
@@ -20,7 +20,7 @@ function App() {
       const response = await apiService.getNearBySites({
         latitude,
         longitude,
-        radius: 2000 // 2km radius
+        radius: 5000 // 5km radius para mayor precisión en sitios culturales/históricos
       })
       
       if (response.success) {
@@ -77,7 +77,7 @@ function App() {
         <div className="results-section">
           <SitesList 
             sites={sites}
-            loading={loading}
+            isLoading={loading}
             error={error}
           />
         </div>

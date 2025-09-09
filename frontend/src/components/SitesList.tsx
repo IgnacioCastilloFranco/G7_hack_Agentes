@@ -1,86 +1,94 @@
 import React from 'react';
-import { type Site } from '../services/api';
-import './components.css';
+import type { SiteInfo } from '../services/api';
 
 interface SitesListProps {
-  sites: Site[];
-  loading: boolean;
-  error: string | null;
+  sites: SiteInfo[];
+  isLoading: boolean;
+  error?: string | null;
 }
 
-const SitesList: React.FC<SitesListProps> = ({ sites, loading, error }) => {
-  if (loading) {
+const SitesList: React.FC<SitesListProps> = ({ sites, isLoading, error }) => {
+  const formatDistance = (distance?: number): string => {
+    if (!distance) return '';
+    if (distance < 1000) {
+      return `${Math.round(distance)}m`;
+    }
+    return `${(distance / 1000).toFixed(1)}km`;
+  };
+
+  const getTypeIcon = (types?: string[]): string => {
+    if (!types) return '🏛️';
+    
+    if (types.includes('museum')) return '🏛️';
+    if (types.includes('church') || types.includes('place_of_worship')) return '⛪';
+    if (types.includes('art_gallery')) return '🎨';
+    if (types.includes('library')) return '📚';
+    if (types.includes('university')) return '🎓';
+    if (types.includes('tourist_attraction')) return '🏰';
+    
+    return '🏛️';
+  };
+
+  if (error) {
     return (
-      <div className="sites-list-loading">
-        <div className="loading-spinner large"></div>
-        <p>El Ratoncito Pérez está buscando lugares mágicos...</p>
+      <div className="error">
+        <p>❌ {error}</p>
       </div>
     );
   }
 
-  if (error) {
+  if (isLoading) {
     return (
-      <div className="sites-list-error">
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🐭💫</div>
-        <p>¡Ups! El Ratoncito Pérez encontró un problemita:</p>
-        <p style={{ fontWeight: 'bold', color: '#dc2626' }}>{error}</p>
-        <p style={{ fontSize: '0.9rem', marginTop: '1rem' }}>¡Inténtalo de nuevo en un ratito!</p>
+      <div className="loading">
+        <div className="loading-spinner"></div>
+        <p>🔍 Buscando lugares mágicos cerca de ti...</p>
       </div>
     );
   }
 
   if (sites.length === 0) {
     return (
-      <div className="sites-list-empty">
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🐭🔍</div>
-        <p>¡El Ratoncito Pérez no encontró lugares con ese nombre!</p>
-        <p style={{ fontSize: '0.9rem', color: '#6b7280' }}>Prueba buscando algo como "Palacio Real" o "Museo del Prado"</p>
+      <div className="no-sites">
+        <p>No se encontraron sitios culturales e históricos en esta área. ¡Prueba en otra ubicación!</p>
       </div>
     );
   }
 
   return (
     <div className="sites-list">
-      <h3>🏛️ Lugares Mágicos Encontrados ({sites.length})</h3>
+      <h3>🏛️ Sitios Culturales e Históricos Encontrados</h3>
       <div className="sites-grid">
         {sites.map((site, index) => (
-          <div key={index} className="site-card">
+          <div key={site.place_id || index} className="site-card">
             <div className="site-header">
-              <h4>📍 {site.name}</h4>
-              {site.rating && (
-                <div className="site-rating">
-                  <span className="stars">{'⭐'.repeat(Math.floor(site.rating))}</span>
-                  <span className="rating-number">{site.rating}</span>
-                </div>
-              )}
+              <div className="site-title">
+                <span className="site-icon">{getTypeIcon(site.types)}</span>
+                <h4>{site.name}</h4>
+              </div>
+              <div className="site-meta">
+                {site.distance && (
+                  <span className="site-distance">{formatDistance(site.distance)}</span>
+                )}
+                {site.rating && (
+                  <div className="site-rating">
+                    <span className="stars">{'⭐'.repeat(Math.round(site.rating))}</span>
+                    <span className="rating-number">({site.rating})</span>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            <div className="site-details">
-              {site.address && (
-                <div className="site-detail">
-                  <span className="detail-icon">🏠</span>
-                  <span className="detail-text">{site.address}</span>
-                </div>
-              )}
-              
-              {site.description && (
-                <div className="site-detail">
-                  <span className="detail-icon">📝</span>
-                  <span className="detail-text">{site.description}</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="site-actions">
-              <a 
-                href={`https://www.google.com/maps?q=${site.latitude},${site.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="maps-button"
-              >
-                🗺️ Ver en Google Maps
-              </a>
-            </div>
+            <p className="site-address">📍 {site.address}</p>
+            <p className="site-description">{site.description}</p>
+            {site.photo_url && (
+              <img 
+                src={site.photo_url} 
+                alt={site.name}
+                className="site-photo"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
           </div>
         ))}
       </div>

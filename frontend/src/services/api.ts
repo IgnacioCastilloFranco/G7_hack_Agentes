@@ -1,18 +1,20 @@
 const API_BASE_URL = 'http://localhost:8000/ratoncito';
 
-export interface Site {
+export interface SiteInfo {
   name: string;
   address: string;
   latitude: number;
   longitude: number;
-  description?: string;
+  description: string;
   rating?: number;
   photo_url?: string;
   place_id?: string;
+  distance?: number;
+  types?: string[];
 }
 
 export interface SitesResponse {
-  sites: Site[];
+  sites: SiteInfo[];
   success: boolean;
   message?: string;
 }
@@ -28,8 +30,6 @@ export interface SiteSearchRequest {
   location?: string;
 }
 
-export type { Site };
-
 class ApiService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -37,13 +37,13 @@ class ApiService {
     const defaultOptions: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
       },
-      ...options,
     };
-
+    
+    const mergedOptions = { ...defaultOptions, ...options };
+    
     try {
-      const response = await fetch(url, defaultOptions);
+      const response = await fetch(url, mergedOptions);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -59,45 +59,67 @@ class ApiService {
   async getNearBySites(request: LocationRequest): Promise<SitesResponse> {
     return this.makeRequest<SitesResponse>('/sites/nearby', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify(request)
     });
+  }
+
+  async getNearbyPlaces(latitude: number, longitude: number, radius: number = 5000): Promise<SiteInfo[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sites/nearby`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude,
+          radius
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Error fetching nearby places');
+      }
+
+      return data.sites || [];
+    } catch (error) {
+      console.error('Error in getNearbyPlaces:', error);
+      throw error;
+    }
   }
 
   async searchSites(request: SiteSearchRequest): Promise<SitesResponse> {
     return this.makeRequest<SitesResponse>('/sites/search', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify(request)
     });
   }
 
-  async chatWithReactAgent(message: string, location?: string, context?: any): Promise<any> {
+  async chatWithReactAgent(message: string, location?: string, context?: object): Promise<object> {
     return this.makeRequest('/chat/react', {
       method: 'POST',
-      body: JSON.stringify({
-        message,
-        location,
-        context,
-      }),
+      body: JSON.stringify({ message, location, context })
     });
   }
 
-  async chatWithSimpleAgent(message: string, location?: string): Promise<any> {
+  async chatWithSimpleAgent(message: string, location?: string): Promise<object> {
     return this.makeRequest('/chat/simple', {
       method: 'POST',
-      body: JSON.stringify({
-        message,
-        location,
-      }),
+      body: JSON.stringify({ message, location })
     });
   }
 
-  async compareAgents(message: string, location?: string): Promise<any> {
-    const params = new URLSearchParams({ message });
-    if (location) {
-      params.append('location', location);
-    }
-    
-    return this.makeRequest(`/compare?${params.toString()}`);
+  async compareAgents(message: string, location?: string): Promise<object> {
+    return this.makeRequest('/chat/compare', {
+      method: 'POST',
+      body: JSON.stringify({ message, location })
+    });
   }
 }
 

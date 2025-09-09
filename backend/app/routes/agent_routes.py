@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional, List
 from app.agents.ratoncito_agent import create_ratoncito_agent
 from app.agents.simple_ratoncito import create_magic_ratoncito_agent
 from fastapi.responses import HTMLResponse
+from app.services.google_places_service import GooglePlacesService
 
 router = APIRouter()
 
@@ -324,6 +325,8 @@ class SiteInfo(BaseModel):
     rating: Optional[float] = None
     photo_url: Optional[str] = None
     place_id: Optional[str] = None
+    distance: Optional[float] = None
+    types: Optional[List[str]] = None
     
 class SitesResponse(BaseModel):
     sites: List[SiteInfo]
@@ -332,56 +335,31 @@ class SitesResponse(BaseModel):
 
 @router.post("/sites/nearby", response_model=SitesResponse)
 async def get_nearby_sites(request: LocationRequest):
-    """Buscar sitios de interés por coordenadas geográficas"""
+    """Buscar sitios de interés cultural e histórico por coordenadas geográficas"""
     try:
-        # Por ahora devolvemos datos dummy de Madrid
-        # TODO: Integrar con Google Places API
-        dummy_sites = [
-            {
-                "name": "Palacio Real de Madrid",
-                "address": "Calle de Bailén, s/n, 28071 Madrid",
-                "latitude": 40.4179,
-                "longitude": -3.7142,
-                "description": "Residencia oficial de la Familia Real Española, uno de los palacios más grandes de Europa.",
-                "rating": 4.5,
-                "photo_url": None,
-                "place_id": "palacio_real_madrid"
-            },
-            {
-                "name": "Plaza Mayor",
-                "address": "Plaza Mayor, 28012 Madrid",
-                "latitude": 40.4155,
-                "longitude": -3.7074,
-                "description": "Plaza porticada de planta rectangular, uno de los lugares más emblemáticos de Madrid.",
-                "rating": 4.4,
-                "photo_url": None,
-                "place_id": "plaza_mayor_madrid"
-            },
-            {
-                "name": "Puerta del Sol",
-                "address": "Puerta del Sol, 28013 Madrid",
-                "latitude": 40.4169,
-                "longitude": -3.7035,
-                "description": "Plaza pública situada en el centro de Madrid, conocida por el reloj de la Casa de Correos.",
-                "rating": 4.2,
-                "photo_url": None,
-                "place_id": "puerta_del_sol_madrid"
-            },
-            {
-                "name": "Parque del Retiro",
-                "address": "Plaza de la Independencia, 7, 28001 Madrid",
-                "latitude": 40.4153,
-                "longitude": -3.6844,
-                "description": "Parque histórico y jardín público situado en el centro de Madrid.",
-                "rating": 4.6,
-                "photo_url": None,
-                "place_id": "parque_retiro_madrid"
-            }
-        ]
+        places_service = GooglePlacesService()
+        places_data = await places_service.search_nearby_cultural_sites(
+            latitude=request.latitude, 
+            longitude=request.longitude, 
+            radius=request.radius
+        )
         
-        # Filtrar por proximidad (simulado)
-        # En una implementación real, calcularíamos la distancia real
-        sites = [SiteInfo(**site) for site in dummy_sites]
+        # Convertir a nuestro modelo SiteInfo
+        sites = []
+        for place in places_data:
+            site = SiteInfo(
+                name=place.get('name'),
+                address=place.get('address'),
+                latitude=place.get('latitude'),
+                longitude=place.get('longitude'),
+                description=place.get('description'),
+                rating=place.get('rating'),
+                photo_url=place.get('photo_url'),
+                place_id=place.get('place_id'),
+                distance=place.get('distance'),
+                types=place.get('types')
+            )
+            sites.append(site)
         
         return SitesResponse(
             sites=sites,
@@ -389,6 +367,13 @@ async def get_nearby_sites(request: LocationRequest):
             message=f"Encontrados {len(sites)} sitios cerca de las coordenadas proporcionadas"
         )
         
+    except ValueError as ve:
+        # Error de configuración (API key faltante)
+        return SitesResponse(
+            sites=[],
+            success=False,
+            message=f"Error de configuración: {str(ve)}"
+        )
     except Exception as e:
         return SitesResponse(
             sites=[],
@@ -398,82 +383,41 @@ async def get_nearby_sites(request: LocationRequest):
 
 @router.post("/sites/search", response_model=SitesResponse)
 async def search_sites_by_name(request: SiteSearchRequest):
-    """Buscar sitios de interés por nombre"""
+    """Buscar sitios de interés cultural e histórico por nombre"""
     try:
-        # Datos dummy de sitios de Madrid para búsqueda
-        all_sites = [
-            {
-                "name": "Palacio Real de Madrid",
-                "address": "Calle de Bailén, s/n, 28071 Madrid",
-                "latitude": 40.4179,
-                "longitude": -3.7142,
-                "description": "Residencia oficial de la Familia Real Española, uno de los palacios más grandes de Europa.",
-                "rating": 4.5,
-                "photo_url": None,
-                "place_id": "palacio_real_madrid"
-            },
-            {
-                "name": "Plaza Mayor",
-                "address": "Plaza Mayor, 28012 Madrid",
-                "latitude": 40.4155,
-                "longitude": -3.7074,
-                "description": "Plaza porticada de planta rectangular, uno de los lugares más emblemáticos de Madrid.",
-                "rating": 4.4,
-                "photo_url": None,
-                "place_id": "plaza_mayor_madrid"
-            },
-            {
-                "name": "Puerta del Sol",
-                "address": "Puerta del Sol, 28013 Madrid",
-                "latitude": 40.4169,
-                "longitude": -3.7035,
-                "description": "Plaza pública situada en el centro de Madrid, conocida por el reloj de la Casa de Correos.",
-                "rating": 4.2,
-                "photo_url": None,
-                "place_id": "puerta_del_sol_madrid"
-            },
-            {
-                "name": "Parque del Retiro",
-                "address": "Plaza de la Independencia, 7, 28001 Madrid",
-                "latitude": 40.4153,
-                "longitude": -3.6844,
-                "description": "Parque histórico y jardín público situado en el centro de Madrid.",
-                "rating": 4.6,
-                "photo_url": None,
-                "place_id": "parque_retiro_madrid"
-            },
-            {
-                "name": "Museo del Prado",
-                "address": "Calle de Ruiz de Alarcón, 23, 28014 Madrid",
-                "latitude": 40.4138,
-                "longitude": -3.6921,
-                "description": "Museo nacional de pintura que exhibe una de las mejores colecciones de arte europeo.",
-                "rating": 4.7,
-                "photo_url": None,
-                "place_id": "museo_prado_madrid"
-            },
-            {
-                "name": "Templo de Debod",
-                "address": "Calle de Ferraz, 1, 28008 Madrid",
-                "latitude": 40.4240,
-                "longitude": -3.7177,
-                "description": "Templo egipcio del siglo II a.C. trasladado piedra a piedra desde Egipto.",
-                "rating": 4.3,
-                "photo_url": None,
-                "place_id": "templo_debod_madrid"
-            }
-        ]
+        places_service = GooglePlacesService()
         
-        # Filtrar sitios que coincidan con la búsqueda
-        query_lower = request.query.lower()
-        filtered_sites = [
-            site for site in all_sites 
-            if query_lower in site["name"].lower() or 
-               query_lower in site["description"].lower() or
-               query_lower in site["address"].lower()
-        ]
+        # Determinar coordenadas para la búsqueda
+        latitude = None
+        longitude = None
+        if request.location:
+            # Si se proporciona una ubicación, podríamos geocodificarla
+            # Por ahora usamos coordenadas de Madrid como fallback
+            latitude = 40.4168
+            longitude = -3.7038
         
-        sites = [SiteInfo(**site) for site in filtered_sites]
+        places_data = await places_service.search_places_by_text(
+            query=request.query,
+            latitude=latitude,
+            longitude=longitude
+        )
+        
+        # Convertir a nuestro modelo SiteInfo
+        sites = []
+        for place in places_data:
+            site = SiteInfo(
+                name=place.get('name'),
+                address=place.get('address'),
+                latitude=place.get('latitude'),
+                longitude=place.get('longitude'),
+                description=place.get('description'),
+                rating=place.get('rating'),
+                photo_url=place.get('photo_url'),
+                place_id=place.get('place_id'),
+                distance=place.get('distance'),
+                types=place.get('types')
+            )
+            sites.append(site)
         
         return SitesResponse(
             sites=sites,
@@ -481,6 +425,13 @@ async def search_sites_by_name(request: SiteSearchRequest):
             message=f"Encontrados {len(sites)} sitios que coinciden con '{request.query}'"
         )
         
+    except ValueError as ve:
+        # Error de configuración (API key faltante)
+        return SitesResponse(
+            sites=[],
+            success=False,
+            message=f"Error de configuración: {str(ve)}"
+        )
     except Exception as e:
         return SitesResponse(
             sites=[],
