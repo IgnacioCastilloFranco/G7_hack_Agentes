@@ -115,7 +115,11 @@ const PlacesList = ({ places, isLoading, error, onSelectPlace }) => {
               flexDirection: 'column',
               position: 'relative',
               overflow: 'hidden',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+              }
             }}
             onClick={() => onSelectPlace(place)}
           >

@@ -21,14 +21,14 @@ const PlaceChat = ({ place, onClose }) => {
   const [error, setError] = useState(null);
   const chatContainerRef = useRef(null);
   
-  // Iniciar chat automáticamente cuando se abre
+  // Iniciamos chat automáticamente cuando se abre, pero no me convence
   useEffect(() => {
     if (place && chatHistory.length === 0) {
       handleInitialMessage();
     }
   }, [place]);
   
-  // Auto-scroll al mensaje más reciente
+  // Auto-scroll al mensaje más reciente, hay que mejorarlo
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;

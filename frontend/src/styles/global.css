@@ -149,3 +149,40 @@ body {
         left: 100%;
     }
 }
+
+.historical-modal .MuiDialog-paper {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.historical-content {
+    font-family: 'Nunito', sans-serif;
+    line-height: 1.6;
+}
+
+.historical-content h1,
+.historical-content h2,
+.historical-content h3 {
+    color: #374151;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.historical-content p {
+    margin-bottom: 1rem;
+    color: #4b5563;
+}
+
+.historical-content strong {
+    color: #1f2937;
+}
+
+/* Efecto hover mejorado para lugares clickeables */
+.place-card-clickable {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.place-card-clickable:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}

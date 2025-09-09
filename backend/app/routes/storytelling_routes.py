@@ -6,7 +6,6 @@ from app.agents.ratoncito_agent import create_ratoncito_agent
 
 router = APIRouter()
 
-# Inicializar el agente solo una vez (singleton)
 _ratoncito_agent = None
 
 def get_ratoncito_agent():
@@ -27,10 +26,9 @@ class AnswerRequest(BaseModel):
     game_id: str
     answer: str
 
-# Diccionario para almacenar juegos (en producción usarías una base de datos)
+# Diccionario para almacenar juegos, se podría mejorar con una base de datos real
 games_db = {}
 
-# Endpoints
 @router.post("/games")
 async def create_game(request: GameRequest):
     """Crear un juego o acertijo basado en una ubicación usando el agente ReAct"""
@@ -38,7 +36,7 @@ async def create_game(request: GameRequest):
     game_id = str(uuid.uuid4())[:8]
     agent = get_ratoncito_agent()
     
-    # Crear el prompt para el agente
+    # Crear el prompt para el agente, se puede ajustar y pasar a otro archivo
     interests_text = ", ".join(request.interests) if request.interests else "historia y aventuras"
     prompt = f"""Crea un acertijo mágico sobre {request.location} para niños de {request.age_range} años 
     interesados en {interests_text}. El acertijo debe ser de dificultad {request.difficulty}.
@@ -50,13 +48,11 @@ async def create_game(request: GameRequest):
         "learning_fact": "Un dato interesante sobre {request.location} para niños"
     }}"""
     
-    # Obtener respuesta del agente
     try:
         result = agent.chat(prompt)
         response_text = result.get("response", "")
         
-        # Extraer las partes del acertijo (en una implementación real, parsearías el JSON)
-        # Esto es simplificado para el ejemplo
+        # Esto es para el ejemplo
         game_data = {
             "id": game_id,
             "title": f"Misterio en {request.location}",
@@ -70,10 +66,10 @@ async def create_game(request: GameRequest):
             "location": request.location,
             "difficulty": request.difficulty,
             "age_range": request.age_range,
-            "answer": "La respuesta correcta" # En un sistema real, extraerías esto del agente
+            "answer": "La respuesta correcta" # Podríamos extraerlo del Json del agente 
         }
         
-        # Guardar en "base de datos"
+        # Guardar 
         games_db[game_id] = game_data
         
         # No devolvemos la respuesta en la API
@@ -96,7 +92,7 @@ async def verify_answer(request: AnswerRequest):
     game = games_db[request.game_id]
     agent = get_ratoncito_agent()
     
-    # Usar el agente para evaluar la respuesta (es más flexible que una comparación exacta)
+    # Usar el agente para evaluar la respuesta
     prompt = f"""
     Evalúa si la respuesta "{request.answer}" es correcta para este acertijo sobre {game['location']}.
     El acertijo era: "{game['content']}"
@@ -111,7 +107,6 @@ async def verify_answer(request: AnswerRequest):
         result = agent.chat(prompt)
         feedback = result.get("response", "")
         
-        # Determinar si es correcto (simplificado)
         is_correct = "correcta" in feedback.lower() or "acertado" in feedback.lower()
         
         return {
@@ -150,8 +145,7 @@ async def get_location_trivia(
     try:
         result = agent.chat(prompt)
         
-        # En una implementación real, parsearías el JSON de la respuesta
-        # Esto es un ejemplo simplificado
+        # Aquí también deberíamos parsear el JSON real
         questions = [
             {
                 "question": f"¿Qué secreto mágico guarda el Ratoncito Pérez en {location}?",
@@ -195,7 +189,7 @@ async def get_location_challenges(
     try:
         result = agent.chat(prompt)
         
-        # Simplificado para el ejemplo
+        # Simplificado para el ejemplo, otra vez, parsearíamos el JSON real
         return {
             "location": location,
             "challenges": [

@@ -121,7 +121,7 @@ async def get_popular_places():
         
         return {
             "success": True,
-            "sites": sites[:12],  # Limitamos a los 12 más populares
+            "sites": sites[:12],  # Limitamos a los 12 más populares, poruque Google Places no tiene un ranking exacto
             "count": min(len(sites), 12),
             "message": "Lugares más populares para narrativas mágicas de Madrid"
         }
@@ -147,9 +147,7 @@ async def place_contextual_chat(
         datos históricos interesantes y curiosidades sobre él.
         """
         
-        # Prepara el mensaje para el agente
         if not request.chat_history:
-            # Primer mensaje en el chat
             prompt = f"""
             {place_context}
             
@@ -160,7 +158,6 @@ async def place_contextual_chat(
             pregunta al final para mantener la conversación interactiva.
             """
         else:
-            # Continuación de la conversación
             chat_history_text = "\n".join([
                 f"{'Usuario' if msg.get('role') == 'user' else 'Ratoncito'}: {msg.get('content')}"
                 for msg in request.chat_history[-5:]  # Últimos 5 mensajes para no sobrecargar
@@ -178,7 +175,6 @@ async def place_contextual_chat(
             Sé informativo pero también imaginativo.
             """
         
-        # Obtener respuesta del agente
         result = ratoncito_agent.chat(prompt)
         response_text = result.get("response", "¡Por mis bigotitos! Parece que me he quedado sin palabras...")
         
@@ -221,7 +217,7 @@ async def create_magical_story(request: StoryRequest):
 @router.post("/legends", response_model=Dict[str, Any])
 async def get_location_legends(request: LegendRequest):
     try:
-        # Usar directamente el agente para generar leyendas personalizadas
+        # Usamos directamente el agente para generar leyendas personalizadas
         ratoncito = create_ratoncito_agent()
         
         # Crear prompt específico para leyendas
@@ -236,9 +232,8 @@ async def get_location_legends(request: LegendRequest):
         # Procesar respuesta
         legend_text = result.get("response", "")
         
-        # Extraer título (simplificado - en producción se haría con más precisión)
         title = f"La Leyenda de {request.location}"
-        if ": " in legend_text[:50]:  # Buscar posible título al principio
+        if ": " in legend_text[:50]:  
             parts = legend_text.split(": ", 1)
             title = parts[0]
             content = parts[1]
@@ -262,7 +257,7 @@ async def search_magical_places(
     limit: int = Query(5, description="Número máximo de resultados")
 ):
     try:
-        # Lugares predefinidos (en producción vendrían de base de datos)
+        # Lugares predefinidos pero podrían venir de una base de datos
         places = [
             {"name": "Palacio Real", "type": "monumento", "magical_level": 5},
             {"name": "Parque del Retiro", "type": "parque", "magical_level": 4},
@@ -274,14 +269,14 @@ async def search_magical_places(
             {"name": "Mercado de San Miguel", "type": "mercado", "magical_level": 3},
         ]
         
-        # Filtrar según query (búsqueda simple)
+        # Filtrar 
         query_lower = query.lower()
         filtered_places = [
             place for place in places 
             if query_lower in place["name"].lower() or query_lower in place["type"].lower()
         ][:limit]
         
-        # Añadir una descripción mágica a cada lugar
+        # Añadir una descripción mágica a cada lugar, mejorar
         for place in filtered_places:
             ratoncito = create_ratoncito_agent()
             result = ratoncito.chat(f"Describe brevemente {place['name']} de forma mágica para niños en una frase")
@@ -297,16 +292,13 @@ async def get_storytelling_elements(
     element_type: str = Query("all", description="Tipo de elemento: characters, objects, magical_events, all")
 ):
     try:
-        # Esta función proporcionaría elementos para que el frontend construya historias interactivas
         
-        # Usar el agente para generar elementos narrativos
         ratoncito = create_ratoncito_agent()
         
         if element_type == "characters" or element_type == "all":
             char_prompt = f"Genera 3 personajes mágicos que podrían aparecer en una historia en {location}. Solo nombres y una frase descriptiva para cada uno."
             char_result = ratoncito.chat(char_prompt)
             characters_text = char_result.get("response", "")
-            # En producción se haría un parsing más sofisticado de los personajes
             characters = [
                 {"name": "Personaje 1", "description": "Descripción..."},
                 {"name": "Personaje 2", "description": "Descripción..."},
@@ -319,7 +311,6 @@ async def get_storytelling_elements(
             obj_prompt = f"Menciona 3 objetos mágicos que podrían encontrarse en {location}"
             obj_result = ratoncito.chat(obj_prompt)
             objects_text = obj_result.get("response", "")
-            # En producción se haría un parsing más sofisticado de los objetos
             objects = [
                 {"name": "Objeto 1", "power": "Poder mágico..."},
                 {"name": "Objeto 2", "power": "Poder mágico..."},
@@ -332,7 +323,6 @@ async def get_storytelling_elements(
             event_prompt = f"Describe 2 eventos mágicos que podrían ocurrir en {location}"
             event_result = ratoncito.chat(event_prompt)
             events_text = event_result.get("response", "")
-            # En producción se haría un parsing más sofisticado de los eventos
             magical_events = [
                 {"name": "Evento 1", "description": "Descripción..."},
                 {"name": "Evento 2", "description": "Descripción..."}

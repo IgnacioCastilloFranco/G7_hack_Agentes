@@ -6,13 +6,12 @@ const MagicAnimation = ({ children }) => {
   const [bubbles, setBubbles] = useState([]);
   
   useEffect(() => {
-    // Crear burbujas mágicas aleatorias
     const newBubbles = Array.from({ length: 10 }, (_, i) => ({
       id: i,
-      size: Math.random() * 40 + 10, // 10-50px
+      size: Math.random() * 40 + 10, 
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
-      duration: Math.random() * 15 + 10, // 10-25s
+      duration: Math.random() * 15 + 10, 
       delay: Math.random() * 5,
     }));
     
@@ -21,7 +20,6 @@ const MagicAnimation = ({ children }) => {
   
   return (
     <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-      {/* Burbujas mágicas */}
       {bubbles.map((bubble) => (
         <Box
           key={bubble.id}
@@ -46,7 +44,6 @@ const MagicAnimation = ({ children }) => {
         />
       ))}
       
-      {/* Contenido principal con animación */}
       <Box
         component={motion.div}
         initial={{ opacity: 0, y: 20 }}

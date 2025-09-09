@@ -57,11 +57,10 @@ const LocationsPage = () => {
   const [error, setError] = useState(null);
   const [places, setPlaces] = useState([]);
   
-  // Simular carga de datos
   useEffect(() => {
     setIsLoading(true);
     
-    // En un caso real, aquí harías la llamada a la API
+    // Aquí se llamaría a la api real, pero simplemente simulamos un retardo
     setTimeout(() => {
       setPlaces(locations);
       setIsLoading(false);
@@ -94,7 +93,6 @@ const LocationsPage = () => {
         ) : (
           <Grid container spacing={4}>
             {isLoading ? (
-              // Esqueletos durante la carga
               Array.from(new Array(6)).map((_, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
                   <Card sx={{ height: '100%' }}>
@@ -108,7 +106,6 @@ const LocationsPage = () => {
                 </Grid>
               ))
             ) : (
-              // Lugares reales
               places.map((location) => (
                 <Grid 
                   item 

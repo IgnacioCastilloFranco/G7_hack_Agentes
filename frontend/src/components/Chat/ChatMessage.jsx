@@ -3,7 +3,6 @@ import { Box, Paper, Typography, Avatar } from '@mui/material';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
-// Variantes para la animación
 const messageVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 }

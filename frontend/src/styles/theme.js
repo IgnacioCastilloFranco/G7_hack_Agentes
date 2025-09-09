@@ -17,9 +17,9 @@ const theme = createTheme({
       paper: '#ffffff',
     },
     magic: {
-      light: '#e3f2fd', // Azul claro para elementos mágicos
-      main: '#90caf9', // Azul medio para elementos mágicos
-      dark: '#42a5f5', // Azul oscuro para elementos mágicos
+      light: '#e3f2fd', 
+      main: '#90caf9', 
+      dark: '#42a5f5', 
       contrastText: '#000',
     },
   },

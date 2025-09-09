@@ -26,7 +26,7 @@ class GooglePlacesService:
         Returns:
             Lista de sitios encontrados
         """
-        # Tipos de lugares culturales e históricos
+        # Tipos de lugares culturales e históricos, yo lo acortaría un poco
         place_types = [
             'museum',
             'tourist_attraction', 
@@ -42,7 +42,7 @@ class GooglePlacesService:
         
         all_places = []
         
-        # Buscar por cada tipo de lugar
+        # Buscar por cada tipo de lugar, mejorar también
         for place_type in place_types:
             try:
                 places = await self._search_places_by_type(
@@ -53,21 +53,21 @@ class GooglePlacesService:
                 print(f"Error buscando {place_type}: {e}")
                 continue
         
-        # Eliminar duplicados basándose en place_id
+        # Eliminamos duplicados basándonos en place_id
         unique_places = {}
         for place in all_places:
             place_id = place.get('place_id')
             if place_id and place_id not in unique_places:
                 unique_places[place_id] = place
         
-        # Ordenar por rating y proximidad
+        # Ordenamos, comprobar que funciona bien
         sorted_places = sorted(
             unique_places.values(),
             key=lambda x: (x.get('rating', 0), -x.get('distance', float('inf'))),
             reverse=True
         )
         
-        return sorted_places[:20]  # Limitar a 20 resultados
+        return sorted_places[:20]  # Limitamos a los 20 mejores
     
     async def _search_places_by_type(self, latitude: float, longitude: float, radius: int, place_type: str) -> List[Dict[str, Any]]:
         """
@@ -77,10 +77,10 @@ class GooglePlacesService:
         
         params = {
             'location': f"{latitude},{longitude}",
-            'radius': min(radius, 50000),  # Google Places API límite
+            'radius': min(radius, 50000), 
             'type': place_type,
             'key': self.api_key,
-            'language': 'es'  # Respuestas en español
+            'language': 'es' 
         }
         
         async with httpx.AsyncClient() as client:
@@ -95,7 +95,7 @@ class GooglePlacesService:
             
             places = []
             for result in data.get('results', []):
-                # Filtrar solo lugares con rating alto y que sean realmente culturales
+                # Filtrar solo lugares con rating alto y que sean realmente culturales, mejorar
                 if self._is_cultural_place(result):
                     place_info = await self._format_place_info(result, latitude, longitude)
                     if place_info:
@@ -107,17 +107,17 @@ class GooglePlacesService:
         """
         Determina si un lugar es realmente cultural/histórico basándose en varios criterios
         """
-        # Debe tener un rating mínimo
+        # Limitamos a lugares con buena valoración
         rating = place.get('rating', 0)
         if rating < 3.5:
             return False
         
-        # Debe tener suficientes reseñas para ser confiable
+        # Y debe tener un número mínimo de valoraciones
         user_ratings_total = place.get('user_ratings_total', 0)
         if user_ratings_total < 10:
             return False
         
-        # Filtrar por tipos relevantes
+        # Intentamos filtrar por tipos
         types = place.get('types', [])
         cultural_types = {
             'museum', 'art_gallery', 'tourist_attraction', 'church', 
@@ -129,7 +129,7 @@ class GooglePlacesService:
         if not any(t in cultural_types for t in types):
             return False
         
-        # Excluir tipos comerciales no culturales
+        # Excluimos tipos comerciale, es decir no culturales
         excluded_types = {
             'store', 'shopping_mall', 'restaurant', 'food', 'lodging',
             'gas_station', 'atm', 'bank', 'pharmacy', 'hospital'
@@ -152,10 +152,10 @@ class GooglePlacesService:
             if not lat or not lng:
                 return None
             
-            # Calcular distancia aproximada
+            # Calculamos distancia aproximada
             distance = self._calculate_distance(user_lat, user_lng, lat, lng)
             
-            # Obtener foto si está disponible
+            # Obtenemos la foto si está disponible
             photo_url = None
             photos = place.get('photos', [])
             if photos:
@@ -187,8 +187,6 @@ class GooglePlacesService:
         """
         Genera una descripción basada en los tipos y información del lugar
         """
-        # types = place.get('types', [])
-        # name = place.get('name', '')
         
         # Mapeo de tipos a descripciones en español
         type_descriptions = {
@@ -267,4 +265,4 @@ class GooglePlacesService:
                     if place_info:
                         places.append(place_info)
             
-            return places[:15]  # Limitar resultados
+            return places[:15]  

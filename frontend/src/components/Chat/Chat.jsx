@@ -26,7 +26,6 @@ const Chat = () => {
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Auto scroll al último mensaje
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -35,7 +34,6 @@ const Chat = () => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    // Añadir mensaje del usuario
     const userMessage = { text: inputValue, isUser: true };
     setMessages([...messages, userMessage]);
     setInputValue('');
@@ -43,10 +41,8 @@ const Chat = () => {
     setIsLoading(true);
 
     try {
-      // Llamar al API
       const response = await sendChatMessage(inputValue);
       
-      // Añadir respuesta del Ratoncito
       setMessages(prev => [...prev, { 
         text: response.response, 
         isUser: false 
@@ -60,7 +56,6 @@ const Chat = () => {
 
   const handleRetry = () => {
     setError(null);
-    // Recuperar el último mensaje del usuario
     const lastUserMessage = [...messages].reverse()
       .find(message => message.isUser)?.text;
       
@@ -101,7 +96,6 @@ const Chat = () => {
           </Typography>
         </Box>
         
-        {/* Messages container */}
         <Box 
           sx={{ 
             p: 2, 
