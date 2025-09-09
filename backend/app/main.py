@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from app.routes import recommendations, agent_routes, narrative_routes
-from backend.app.routes import storytelling_routes
+from app.routes import storytelling_routes
 
 load_dotenv()
 
