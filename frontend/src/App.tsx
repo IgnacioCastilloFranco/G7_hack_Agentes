@@ -3,13 +3,17 @@ import './App.css'
 import LocationComponent from './components/LocationComponent'
 import SearchComponent from './components/SearchComponent'
 import SitesList from './components/SitesList'
-import { apiService, type SiteInfo } from './services/api'
+import HistoricalModal from './components/HistoricalModal'
+import { apiService, type SiteInfo, type HistoricalContextResponse } from './services/api'
 
 function App() {
   const [sites, setSites] = useState<SiteInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [selectedSite, setSelectedSite] = useState<SiteInfo | null>(null)
+  const [historicalContext, setHistoricalContext] = useState<HistoricalContextResponse | null>(null)
+  const [loadingContext, setLoadingContext] = useState(false)
 
   const handleLocationChange = useCallback(async (latitude: number, longitude: number) => {
     setCurrentLocation({ lat: latitude, lng: longitude })
@@ -59,7 +63,34 @@ function App() {
     }
   }, [currentLocation])
 
+  const handleSiteClick = useCallback(async (site: SiteInfo) => {
+    setSelectedSite(site)
+    setLoadingContext(true)
+    
+    try {
+      const response = await apiService.getSiteHistoricalContext({
+        site_name: site.name,
+        site_address: site.address
+      })
+      
+      setHistoricalContext(response)
+    } catch (err) {
+      console.error('Error obteniendo contexto histórico:', err)
+      setHistoricalContext({
+        context: 'Error al obtener información histórica',
+        success: false,
+        site_name: site.name,
+        message: 'No se pudo conectar con el servicio'
+      })
+    } finally {
+      setLoadingContext(false)
+    }
+   }, [])
 
+  const handleCloseModal = useCallback(() => {
+    setSelectedSite(null)
+    setHistoricalContext(null)
+  }, [])
 
   return (
     <div className="app">
@@ -79,6 +110,7 @@ function App() {
             sites={sites}
             isLoading={loading}
             error={error}
+            onSiteClick={handleSiteClick}
           />
         </div>
       </main>
@@ -86,6 +118,13 @@ function App() {
       <footer className="app-footer">
         <p>✨ Con amor, el Ratoncito Pérez ✨</p>
       </footer>
+      
+      <HistoricalModal
+        site={selectedSite}
+        historicalContext={historicalContext}
+        isLoading={loadingContext}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }

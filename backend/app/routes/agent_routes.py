@@ -333,6 +333,16 @@ class SitesResponse(BaseModel):
     success: bool
     message: Optional[str] = None
 
+class HistoricalContextRequest(BaseModel):
+    site_name: str
+    site_address: Optional[str] = None
+
+class HistoricalContextResponse(BaseModel):
+    context: str
+    success: bool
+    site_name: str
+    message: Optional[str] = None
+
 @router.post("/sites/nearby", response_model=SitesResponse)
 async def get_nearby_sites(request: LocationRequest):
     """Buscar sitios de interés cultural e histórico por coordenadas geográficas"""
@@ -437,4 +447,38 @@ async def search_sites_by_name(request: SiteSearchRequest):
             sites=[],
             success=False,
             message=f"Error buscando sitios: {str(e)}"
+        )
+
+@router.post("/sites/historical-context", response_model=HistoricalContextResponse)
+async def get_site_historical_context(request: HistoricalContextRequest):
+    """
+    Obtiene información histórica y cultural detallada de un sitio específico
+    usando el RatoncitoAgent.
+    """
+    try:
+        agent = get_react_agent()
+        
+        # Preparamos el mensaje para el agente
+        site_info = request.site_name
+        if request.site_address:
+            site_info += f" en {request.site_address}"
+            
+        message = f"Dame información histórica y cultural detallada sobre {site_info}"
+        
+        # Obtenemos respuesta del agente
+        result = agent.chat(message, {})
+        
+        return HistoricalContextResponse(
+            context=result.get("response", "No se pudo obtener información histórica"),
+            success=True,
+            site_name=request.site_name,
+            message="Información histórica obtenida exitosamente"
+        )
+        
+    except Exception as e:
+        return HistoricalContextResponse(
+            context="",
+            success=False,
+            site_name=request.site_name,
+            message=f"Error al obtener información histórica: {str(e)}"
         )

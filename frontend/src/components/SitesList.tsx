@@ -5,9 +5,10 @@ interface SitesListProps {
   sites: SiteInfo[];
   isLoading: boolean;
   error?: string | null;
+  onSiteClick?: (site: SiteInfo) => void;
 }
 
-const SitesList: React.FC<SitesListProps> = ({ sites, isLoading, error }) => {
+const SitesList: React.FC<SitesListProps> = ({ sites, isLoading, error, onSiteClick }) => {
   const formatDistance = (distance?: number): string => {
     if (!distance) return '';
     if (distance < 1000) {
@@ -59,7 +60,12 @@ const SitesList: React.FC<SitesListProps> = ({ sites, isLoading, error }) => {
       <h3>🏛️ Sitios Culturales e Históricos Encontrados</h3>
       <div className="sites-grid">
         {sites.map((site, index) => (
-          <div key={site.place_id || index} className="site-card">
+          <div 
+            key={site.place_id || index} 
+            className={`site-card ${onSiteClick ? 'clickable' : ''}`}
+            onClick={() => onSiteClick?.(site)}
+            style={{ cursor: onSiteClick ? 'pointer' : 'default' }}
+          >
             <div className="site-header">
               <div className="site-title">
                 <span className="site-icon">{getTypeIcon(site.types)}</span>

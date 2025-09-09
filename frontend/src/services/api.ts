@@ -30,6 +30,18 @@ export interface SiteSearchRequest {
   location?: string;
 }
 
+export interface HistoricalContextRequest {
+  site_name: string;
+  site_address?: string;
+}
+
+export interface HistoricalContextResponse {
+  context: string;
+  success: boolean;
+  site_name: string;
+  message?: string;
+}
+
 class ApiService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -119,6 +131,13 @@ class ApiService {
     return this.makeRequest('/chat/compare', {
       method: 'POST',
       body: JSON.stringify({ message, location })
+    });
+  }
+
+  async getSiteHistoricalContext(request: HistoricalContextRequest): Promise<HistoricalContextResponse> {
+    return this.makeRequest('/sites/historical-context', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   }
 }
