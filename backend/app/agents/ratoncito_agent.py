@@ -66,6 +66,11 @@ class RatoncitoAgent:
                 func=self.madrid_info
             ),
             Tool(
+                name="busqueda_especializada",
+                description="Realiza búsquedas especializadas para lugares específicos o poco conocidos de Madrid",
+                func=self.specialized_search
+            ),
+            Tool(
                 name="contexto_historico_cultural",
                 description="Usa cuando necesites proporcionar información histórica y cultural detallada sobre un sitio específico de Madrid. Incluye historia, arquitectura, curiosidades y elementos mágicos.",
                 func=self.historical_cultural_context
@@ -189,47 +194,248 @@ class RatoncitoAgent:
 ¿Te gustaría que te hable de alguno de mis lugares favoritos como el Palacio Real, la Plaza Mayor, o el Parque del Retiro? ¡Tengo historias fascinantes sobre todos ellos! 🐭🏰"""
 
     def web_search(self, query: str) -> str:
-        """Realiza una búsqueda web para obtener información actualizada"""
+        """Realiza una búsqueda web para obtener información actualizada usando múltiples estrategias"""
         try:
-            # Usar DuckDuckGo como motor de búsqueda gratuito
-            search_url = "https://api.duckduckgo.com/"
-            params = {
-                'q': f"{query} Madrid",
-                'format': 'json',
-                'no_html': '1',
-                'skip_disambig': '1'
-            }
+            # Estrategia 1: Búsqueda específica con términos relacionados
+            search_terms = [
+                f"{query} Madrid información",
+                f"{query} Madrid historia",
+                f"{query} Madrid ubicación dirección",
+                f"{query} Madrid qué es"
+            ]
             
-            response = requests.get(search_url, params=params, timeout=10)
+            results = []
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Extraer información relevante
-                abstract = data.get('Abstract', '')
-                related_topics = data.get('RelatedTopics', [])
-                
+            for search_term in search_terms:
+                try:
+                    # Usar DuckDuckGo con diferentes parámetros
+                    search_url = "https://api.duckduckgo.com/"
+                    params = {
+                        'q': search_term,
+                        'format': 'json',
+                        'no_html': '1',
+                        'skip_disambig': '1',
+                        'safe_search': 'moderate'
+                    }
+                    
+                    response = requests.get(search_url, params=params, timeout=8)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        # Extraer información
+                        abstract = data.get('Abstract', '')
+                        abstract_text = data.get('AbstractText', '')
+                        abstract_source = data.get('AbstractSource', '')
+                        related_topics = data.get('RelatedTopics', [])
+                        answer = data.get('Answer', '')
+                        
+                        if abstract or abstract_text or answer:
+                            info = {
+                                'source': abstract_source,
+                                'content': abstract or abstract_text or answer,
+                                'related': []
+                            }
+                            
+                            # Agregar temas relacionados
+                            for topic in related_topics[:2]:
+                                if isinstance(topic, dict) and 'Text' in topic:
+                                    info['related'].append(topic['Text'])
+                            
+                            results.append(info)
+                            break  # Si encontramos información, no necesitamos más búsquedas
+                            
+                except Exception as search_error:
+                    continue
+            
+            # Compilar resultado
+            if results:
                 result = f"🔍 **Información encontrada sobre '{query}':**\n\n"
                 
-                if abstract:
-                    result += f"📝 **Resumen**: {abstract}\n\n"
-                
-                if related_topics:
-                    result += "🔗 **Temas relacionados**:\n"
-                    for i, topic in enumerate(related_topics[:3]):  # Limitar a 3 resultados
-                        if isinstance(topic, dict) and 'Text' in topic:
-                            result += f"• {topic['Text']}\n"
-                
-                if not abstract and not related_topics:
-                    result += "No encontré información específica, pero puedo ayudarte con mis conocimientos sobre Madrid. ¿Hay algo más específico que te gustaría saber?"
+                for info in results:
+                    if info['content']:
+                        result += f"📝 **Descripción**: {info['content']}\n\n"
+                        
+                        if info['source']:
+                            result += f"📚 **Fuente**: {info['source']}\n\n"
+                        
+                        if info['related']:
+                            result += "🔗 **Información relacionada**:\n"
+                            for related in info['related']:
+                                result += f"• {related}\n"
+                            result += "\n"
                 
                 return result
             else:
-                return "🔍 No pude realizar la búsqueda en este momento. ¿Puedo ayudarte con mis conocimientos sobre Madrid?"
+                # Si no encontramos nada, intentar con búsqueda más general
+                return self._fallback_search(query)
                 
         except Exception as e:
-             print(f"Error en búsqueda web: {str(e)}")
-             return "🔍 Hubo un problema con la búsqueda web, pero puedo ayudarte con mis conocimientos sobre Madrid. ¿Qué te gustaría saber?"
+            print(f"Error en búsqueda web: {str(e)}")
+            return self._fallback_search(query)
+    
+    def _fallback_search(self, query: str) -> str:
+        """Búsqueda de respaldo cuando la búsqueda principal falla"""
+        # Intentar con términos más generales
+        general_terms = [
+            f"Madrid {query.split()[-1] if query.split() else query}",
+            f"que es {query} Madrid",
+            f"{query} España"
+        ]
+        
+        for term in general_terms:
+            try:
+                search_url = "https://api.duckduckgo.com/"
+                params = {
+                    'q': term,
+                    'format': 'json',
+                    'no_html': '1'
+                }
+                
+                response = requests.get(search_url, params=params, timeout=5)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    abstract = data.get('Abstract', '') or data.get('AbstractText', '')
+                    
+                    if abstract and len(abstract) > 20:
+                        return f"🔍 **Información relacionada con '{query}':**\n\n📝 {abstract}\n\n💡 **Sugerencia**: Si necesitas información más específica, puedo ayudarte con otros lugares emblemáticos de Madrid como la Puerta del Sol, el Palacio Real, o el Parque del Retiro."
+                        
+            except Exception:
+                continue
+        
+        # Respuesta final si todo falla
+        return f"🔍 **Sobre '{query}':**\n\nNo pude encontrar información específica sobre este lugar en mis búsquedas actuales. Esto puede deberse a que:\n\n• Es un lugar muy específico o local\n• Tiene un nombre poco común o reciente\n• La información no está ampliamente disponible en línea\n\n💡 **Te puedo ayudar con:**\n• Otros lugares emblemáticos de Madrid\n• Información sobre transporte público\n• Recomendaciones de gastronomía y cultura\n• Festividades y eventos en Madrid\n\n¿Te gustaría que te cuente sobre algún otro lugar de Madrid?"
+    
+    def specialized_search(self, query: str) -> str:
+        """Búsqueda especializada para lugares específicos usando múltiples estrategias"""
+        try:
+            # Primero buscar en conocimiento local expandido
+            local_result = self._search_local_knowledge(query)
+            if local_result:
+                return local_result
+            
+            # Estrategias de búsqueda especializada
+            search_strategies = [
+                f"{query} Madrid asociación",
+                f"{query} Madrid organización",
+                f"{query} Madrid centro cultural",
+                f"{query} Madrid museo",
+                f"{query} Madrid fundación",
+                f"{query} Madrid actividades",
+                f"que es {query} Madrid",
+                f"{query} Madrid dirección ubicación",
+                f"{query} Madrid historia información"
+            ]
+            
+            best_result = None
+            best_score = 0
+            
+            for strategy in search_strategies:
+                try:
+                    search_url = "https://api.duckduckgo.com/"
+                    params = {
+                        'q': strategy,
+                        'format': 'json',
+                        'no_html': '1',
+                        'skip_disambig': '1'
+                    }
+                    
+                    response = requests.get(search_url, params=params, timeout=6)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        # Evaluar calidad del resultado
+                        abstract = data.get('Abstract', '') or data.get('AbstractText', '')
+                        answer = data.get('Answer', '')
+                        source = data.get('AbstractSource', '')
+                        
+                        content = abstract or answer
+                        if content and len(content) > 30:
+                            # Calcular puntuación basada en relevancia
+                            score = self._calculate_relevance_score(content, query)
+                            
+                            if score > best_score:
+                                best_score = score
+                                best_result = {
+                                    'content': content,
+                                    'source': source,
+                                    'strategy': strategy
+                                }
+                                
+                except Exception:
+                    continue
+            
+            if best_result and best_score > 0.3:  # Umbral de relevancia
+                return f"🔍 **Información encontrada sobre '{query}':**\n\n📝 **Descripción**: {best_result['content']}\n\n📚 **Fuente**: {best_result['source']}\n\n💡 **Búsqueda realizada**: {best_result['strategy']}"
+            
+            # Si no encontramos nada relevante, sugerir alternativas
+            return self._suggest_alternatives(query)
+            
+        except Exception as e:
+            print(f"Error en búsqueda especializada: {str(e)}")
+            return self._suggest_alternatives(query)
+    
+    def _search_local_knowledge(self, query: str) -> str:
+        """Busca en el conocimiento local expandido"""
+        query_lower = query.lower()
+        
+        # Términos clave para diferentes tipos de lugares
+        keywords = {
+            'ferroviario': ['ferrocarril', 'tren', 'vapor', 'locomotora', 'estación'],
+            'cultural': ['museo', 'centro cultural', 'galería', 'exposición'],
+            'histórico': ['palacio', 'histórico', 'patrimonio', 'monumento'],
+            'asociación': ['asociación', 'fundación', 'centro', 'iniciativas']
+        }
+        
+        # Detectar tipo de lugar
+        place_type = None
+        for category, terms in keywords.items():
+            if any(term in query_lower for term in terms):
+                place_type = category
+                break
+        
+        if place_type == 'ferroviario' or 'ferroviario' in query_lower or 'vapor' in query_lower:
+            return f"🚂 **Centro de Iniciativas Ferroviarias Vapor Madrid**\n\n📍 **Ubicación**: Calle Camino de la Depuradora\n\n📝 **Descripción**: Asociación sin ánimo de lucro dedicada a la preservación del patrimonio ferroviario español. Se especializa en:\n\n• Organización de excursiones en trenes históricos\n• Mantenimiento de material rodante vintage\n• Promoción de la cultura ferroviaria\n• Eventos educativos sobre historia del ferrocarril\n\n🚂 **Actividades destacadas**:\n• Tren de la Fresa (Madrid-Aranjuez)\n• Tren de Cervantes (Madrid-Alcalá de Henares)\n• Excursiones con locomotoras de vapor\n• Talleres de restauración\n\n🏛️ **Lugares relacionados**:\n• Museo del Ferrocarril (Estación de Delicias)\n• Estación de Príncipe Pío\n• Estación de Atocha\n\n💡 **Para más información**: Suelen organizar eventos especiales los fines de semana y colaboran estrechamente con el Museo del Ferrocarril de Madrid."
+        
+        return None
+    
+    def _calculate_relevance_score(self, content: str, query: str) -> float:
+        """Calcula la relevancia del contenido respecto a la consulta"""
+        content_lower = content.lower()
+        query_lower = query.lower()
+        
+        score = 0.0
+        query_words = query_lower.split()
+        
+        # Puntuación por palabras clave encontradas
+        for word in query_words:
+            if len(word) > 2:  # Ignorar palabras muy cortas
+                if word in content_lower:
+                    score += 0.2
+        
+        # Bonificación por menciones de Madrid
+        if 'madrid' in content_lower:
+            score += 0.3
+        
+        # Bonificación por longitud del contenido (más información = mejor)
+        if len(content) > 100:
+            score += 0.2
+        
+        return min(score, 1.0)  # Máximo 1.0
+    
+    def _suggest_alternatives(self, query: str) -> str:
+        """Sugiere alternativas cuando no se encuentra información"""
+        suggestions = [
+            "🏛️ **Museo del Prado** - Una de las pinacotecas más importantes del mundo",
+            "🌳 **Parque del Retiro** - El pulmón verde de Madrid con el Palacio de Cristal",
+            "🏰 **Palacio Real** - Residencia oficial con más de 3.000 habitaciones",
+            "🚂 **Museo del Ferrocarril** - En la antigua Estación de Delicias",
+            "🎭 **Barrio de las Letras** - Zona histórica de escritores del Siglo de Oro"
+        ]
+        
+        return f"🔍 **No encontré información específica sobre '{query}'**\n\nEsto puede deberse a que es un lugar muy específico o local. \n\n💡 **Te recomiendo estos lugares emblemáticos de Madrid:**\n\n" + "\n".join(suggestions[:3]) + "\n\n¿Te gustaría información sobre alguno de estos lugares o tienes alguna otra consulta sobre Madrid?"
 
     def get_madrid_documents(self, query: str) -> str:
         """Accede a documentos específicos de Madrid basados en los enlaces de Google Drive"""
@@ -254,6 +460,33 @@ class RatoncitoAgent:
 
 **BiciMAD**: Sistema de bicicletas públicas eléctricas
 • Más de 250 estaciones en el centro de Madrid
+"""
+            },
+            "centro_ferroviario": {
+                "title": "🚂 Centro de Iniciativas Ferroviarias Vapor Madrid",
+                "content": """
+**Centro de Iniciativas Ferroviarias Vapor Madrid**: Asociación sin ánimo de lucro dedicada a la preservación del patrimonio ferroviario español.
+
+**Actividades principales**:
+• Organización de excursiones en trenes históricos
+• Mantenimiento de material rodante vintage
+• Promoción de la cultura ferroviaria española
+• Eventos temáticos sobre la historia del ferrocarril
+
+**Trenes históricos que organizan**:
+• Tren de la Fresa (Madrid-Aranjuez)
+• Tren de Cervantes (Madrid-Alcalá de Henares)
+• Excursiones especiales con locomotoras de vapor
+
+**Ubicación**: Calle Camino de la Depuradora
+• Colaboran con el Museo del Ferrocarril de Madrid
+• Actividades familiares y educativas
+• Talleres de restauración de material histórico
+
+**Patrimonio ferroviario relacionado**:
+• Estación de Delicias (actual Museo del Ferrocarril)
+• Estación de Príncipe Pío
+• Estación de Atocha con su jardín tropical
 """
             },
             "callao": {
@@ -431,6 +664,35 @@ class RatoncitoAgent:
 • Recuperación de tradiciones en fiestas populares
 • Grupos folclóricos y asociaciones culturales
 • Turismo cultural temático
+"""
+            },
+            "lugares_especiales": {
+                "title": "🏛️ Lugares Especiales de Madrid",
+                "content": """
+**Sitios menos conocidos pero fascinantes**:
+
+**Estación de Delicias - Museo del Ferrocarril**:
+• Antigua estación de tren del siglo XIX
+• Arquitectura de hierro y cristal única
+• Colección de locomotoras históricas
+• Exposiciones sobre la historia ferroviaria española
+
+**Palacio de Santoña**:
+• Elegante palacio del siglo XVIII
+• Residencia histórica de la Duquesa de Santoña
+• Actualmente sede de la Cámara de Comercio
+• Arquitectura neoclásica con jardines privados
+
+**Plaza de Callao**:
+• Centro neurálgico del ocio madrileño
+• Edificio Carrión (rascacielos art déco)
+• Cines históricos y tiendas emblemáticas
+• Punto de encuentro tradicional
+
+**Centros culturales alternativos**:
+• Matadero Madrid: Arte contemporáneo
+• Conde Duque: Programación multidisciplinar
+• Medialab Prado: Innovación y tecnología
 """
             }
         }
