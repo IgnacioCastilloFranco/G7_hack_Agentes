@@ -3,7 +3,6 @@ from langchain_groq import ChatGroq
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
 from typing import List, Dict, Any
-from duckduckgo_search import DDGS
 import os
 import requests
 import json
