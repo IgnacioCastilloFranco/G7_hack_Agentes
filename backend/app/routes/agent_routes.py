@@ -39,7 +39,6 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_ratoncito(
     request: ChatRequest,
-    # Usamos Depends para obtener el agente de la sesión correcta
     agent_container: Dict[str, Any] = Depends(get_agent_session)
 ):
     """

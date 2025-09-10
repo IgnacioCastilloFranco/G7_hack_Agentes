@@ -1,7 +1,6 @@
 from typing import Dict, Any, List
 
 # Base de datos simulada con información de Madrid.
-# Esto evita la dependencia circular al no necesitar importar el agente.
 MADRID_DATA: Dict[str, Dict[str, Any]] = {
     "palacio real": {
         "name": "Palacio Real de Madrid",
@@ -49,7 +48,6 @@ def get_madrid_location_info(location_name: str, with_magic: bool = True) -> Dic
             info.pop("legends", None)
         return info
     else:
-        # Si no se encuentra, devuelve una respuesta genérica en lugar de un error.
         return {
             "name": location_name.title(),
             "description": f"Un lugar fascinante en Madrid lleno de posibles aventuras mágicas. Aún estoy investigando sus secretos más profundos.",

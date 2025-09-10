@@ -1,8 +1,6 @@
 from typing import List, Optional, Dict, Any
 import random
 
-# Este servicio ahora es independiente y no necesita importar el agente.
-# Esto rompe la dependencia circular.
 
 def generate_magical_story(
     location: str,
@@ -14,14 +12,12 @@ def generate_magical_story(
     Genera una historia mágica sobre un lugar de Madrid sin depender del agente.
     """
     
-    # Plantillas de historias base
     story_starters = [
         "Hace mucho, mucho tiempo, en el corazón de {location}, vivía un pequeño ratón que no era otro que...",
         "Pocos saben que {location} esconde un secreto mágico. Cada noche, cuando la ciudad duerme...",
         "La leyenda cuenta que el primer diente que recogí fue en {location}, y la historia es así de increíble..."
     ]
     
-    # Elementos mágicos basados en el lugar
     magical_elements = {
         "palacio real": ["armaduras que bailan chotis", "un trono que concede deseos si le dejas un diente debajo", "fantasmas de reyes que juegan al escondite"],
         "parque del retiro": ["barcos en el estanque que navegan solos", "un Palacio de Cristal donde viven hadas de las flores", "árboles cuyas hojas susurran secretos"],
@@ -29,11 +25,9 @@ def generate_magical_story(
         "puerta del sol": ["un reloj que puede detener el tiempo por un segundo", "el Oso y el Madroño que protegen un tesoro", "un túnel secreto bajo el Kilómetro Cero"]
     }
 
-    # Seleccionar elementos aleatorios para la historia
     starter = random.choice(story_starters).format(location=location.title())
     elements = magical_elements.get(location.lower(), ["duendes traviesos", "hechizos de alegría", "tesoros escondidos"])
     
-    # Construir la historia
     content = (
         f"{starter} "
         f"Resulta que en este lugar encantado, existen {random.choice(elements)} y también {random.choice(elements)}. "
@@ -41,7 +35,6 @@ def generate_magical_story(
         f"Fue una aventura increíble llena de misterio y magia."
     )
     
-    # Datos curiosos
     fun_facts = [
         f"¿Sabías que {location.title()} tiene más de 100 años de historias secretas?",
         "El color favorito de los duendes que viven allí es el azul brillante.",

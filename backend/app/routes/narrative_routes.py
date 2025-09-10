@@ -4,8 +4,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from app.services.madrid_info import get_madrid_location_info
 from app.services.storytelling import generate_magical_story
-# Se elimina la importación directa de create_ratoncito_agent para romper el ciclo
-from app.routes.agent_routes import get_agent_session # Importamos la función que ya gestiona al agente
+from app.routes.agent_routes import get_agent_session 
 from app.services.google_places_service import GooglePlacesService
 
 router = APIRouter()
@@ -13,7 +12,7 @@ router = APIRouter()
 google_places = GooglePlacesService()
 class StoryRequest(BaseModel):
     location: str
-    children_age_range: Optional[str] = "4-8"  # Por defecto niños pequeños, pero puede ser "9-12", "13-16", etc.
+    children_age_range: Optional[str] = "4-8"  
     interests: Optional[List[str]] = None
     previous_locations: Optional[List[str]] = None
 
@@ -50,9 +49,8 @@ class PlaceChatRequest(BaseModel):
     place_name: str
     user_message: str = "Cuéntame sobre este lugar"
     chat_history: Optional[List[Dict[str, str]]] = []
-    session_id: str = "default_chat_session" # Añadimos session_id
+    session_id: str = "default_chat_session" 
 
-# Rutas para lugares
 @router.post("/places/nearby", response_model=Dict[str, Any])
 async def get_nearby_places(request: LocationRequest):
     """
@@ -154,7 +152,6 @@ async def place_contextual_chat(
         result = ratoncito_agent.chat(prompt)
         response_text = result.get("response", "¡Por mis bigotitos! Parece que me he quedado sin palabras...")
         
-        # Actualizamos el historial (opcional, pero buena práctica)
         full_chat_history.append({"role": "user", "content": request.user_message})
         full_chat_history.append({"role": "assistant", "content": response_text})
         agent_session["session_state"]["chat_history"] = full_chat_history
@@ -220,5 +217,3 @@ async def get_location_legends(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generando leyenda: {str(e)}")
 
-# Las demás rutas pueden seguir un patrón similar si necesitan al agente, 
-# o funcionar de forma independiente si no lo necesitan.

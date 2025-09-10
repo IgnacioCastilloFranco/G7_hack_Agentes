@@ -2,8 +2,7 @@ from fastapi import APIRouter, HTTPException, Body, Query, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uuid
-# Se elimina la importación directa para romper el ciclo
-from app.routes.agent_routes import get_agent_session # Importamos la función que ya gestiona al agente
+from app.routes.agent_routes import get_agent_session 
 
 router = APIRouter()
 
@@ -21,10 +20,8 @@ class AnswerRequest(BaseModel):
     answer: str
     session_id: str = "default_game_session"
 
-# Diccionario para almacenar juegos (en un entorno real, sería una base de datos)
 games_db = {}
 
-# ---- ENDPOINTS DE ACTIVIDADES ----
 
 @router.post("/games")
 async def create_game(
@@ -49,8 +46,6 @@ async def create_game(
     }}"""
     
     try:
-        # En un sistema real, aquí parsearíamos el JSON de la respuesta del agente
-        # Por ahora, usamos el texto directo
         result = agent.chat(prompt)
         response_text = result.get("response", "No se me ocurre ningún acertijo ahora mismo.")
 
@@ -58,17 +53,17 @@ async def create_game(
             "id": game_id,
             "title": f"Misterio en {request.location}",
             "instructions": "Resuelve este acertijo para descubrir un secreto mágico",
-            "content": response_text, # Usamos la respuesta directa del agente
+            "content": response_text, 
             "location": request.location,
             "difficulty": request.difficulty,
             "age_range": request.age_range,
-            "answer": "La respuesta correcta" # En un caso real, la extraeríamos del JSON
+            "answer": "La respuesta correcta" 
         }
         
         games_db[game_id] = game_data
         
         game_data_response = game_data.copy()
-        del game_data_response["answer"] # No devolvemos la respuesta en la API
+        del game_data_response["answer"] 
             
         return game_data_response
         
@@ -102,7 +97,6 @@ async def verify_answer(
         result = agent.chat(prompt)
         feedback = result.get("response", "")
         
-        # Una forma simple de determinar si la respuesta es correcta
         is_correct = "¡correcto!" in feedback.lower() or "¡acertaste!" in feedback.lower()
         
         return {
@@ -113,4 +107,3 @@ async def verify_answer(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error verificando respuesta: {str(e)}")
 
-# Puedes adaptar las demás rutas para que usen `Depends(get_agent_session)` si necesitan al agente.

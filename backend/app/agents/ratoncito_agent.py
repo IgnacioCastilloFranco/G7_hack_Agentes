@@ -7,7 +7,6 @@ from duckduckgo_search import DDGS
 from app.core.config import settings
 from app.utils.ratoncito_prompts import RatoncitoPrompts
 
-# Clase para gestionar el estado de la conversación (muy importante para la fluidez)
 class ConversationContext:
     def __init__(self):
         self.user_profile = {"type": "unknown", "name": None, "age": None}
@@ -97,7 +96,6 @@ class RatoncitoAgent:
             early_stopping_method="force"
         )
 
-    # --- Implementación de Herramientas Corregida ---
     def identify_user_and_greet(self, input_text: str) -> str:
         """
         Esta herramienta ahora devuelve un DATO, no una instrucción.
@@ -177,5 +175,4 @@ Mensaje del usuario: "{message}"
             return {"response": response, "success": True}
         except Exception as e:
             print(f"❌ Error en el agente ReAct: {str(e)}")
-            # El fallback ahora es una respuesta más amigable
             return {"response": "¡Uy! Un duendecillo travieso ha enredado mis bigotes y no he podido procesar tu petición. ¿Podrías preguntármelo de otra forma?", "success": False, "error": str(e)}
