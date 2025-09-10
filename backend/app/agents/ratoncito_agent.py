@@ -3,6 +3,7 @@ from langchain_groq import ChatGroq
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
 from typing import List, Dict, Any
+from duckduckgo_search import DDGS
 import os
 import requests
 import json
@@ -133,6 +134,17 @@ class RatoncitoAgent:
     def historical_cultural_context(self, site_name: str) -> str:
         """Proporciona contexto histórico y cultural detallado sobre un sitio específico"""
         site_lower = site_name.lower()
+
+        # 🚨 Caso especial: si preguntan por el propio Ratoncito Pérez
+        if "perez" in site_lower or "ratoncito" in site_lower:
+            return """¡Por mis bigotitos! 🐭✨ Yo mismo soy el Ratoncito Pérez.
+    Algunas curiosidades mágicas sobre mí son:
+    - Vivo en una casita secreta en la Calle Arenal, número 8.
+    - Guardo los dientes de leche en cofres encantados llenos de polvo de estrellas.
+    - Trabajo junto con hadas de los dientes de todo el mundo.
+    - A veces viajo en trenes de juguete que cobran vida de noche para recorrer Madrid.
+
+    ¿Quieres que te cuente cómo empezó mi misión mágica de recoger dientes? ✨"""
         
         historical_contexts = {
             "palacio real": {
@@ -194,85 +206,30 @@ class RatoncitoAgent:
 ¿Te gustaría que te hable de alguno de mis lugares favoritos como el Palacio Real, la Plaza Mayor, o el Parque del Retiro? ¡Tengo historias fascinantes sobre todos ellos! 🐭🏰"""
 
     def web_search(self, query: str) -> str:
-        """Realiza una búsqueda web para obtener información actualizada usando múltiples estrategias"""
+        """Realiza una búsqueda web real con DuckDuckGo y devuelve snippets útiles"""
         try:
-            # Estrategia 1: Búsqueda específica con términos relacionados
-            search_terms = [
-                f"{query} Madrid información",
-                f"{query} Madrid historia",
-                f"{query} Madrid ubicación dirección",
-                f"{query} Madrid qué es"
-            ]
-            
             results = []
-            
-            for search_term in search_terms:
-                try:
-                    # Usar DuckDuckGo con diferentes parámetros
-                    search_url = "https://api.duckduckgo.com/"
-                    params = {
-                        'q': search_term,
-                        'format': 'json',
-                        'no_html': '1',
-                        'skip_disambig': '1',
-                        'safe_search': 'moderate'
-                    }
-                    
-                    response = requests.get(search_url, params=params, timeout=8)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        
-                        # Extraer información
-                        abstract = data.get('Abstract', '')
-                        abstract_text = data.get('AbstractText', '')
-                        abstract_source = data.get('AbstractSource', '')
-                        related_topics = data.get('RelatedTopics', [])
-                        answer = data.get('Answer', '')
-                        
-                        if abstract or abstract_text or answer:
-                            info = {
-                                'source': abstract_source,
-                                'content': abstract or abstract_text or answer,
-                                'related': []
-                            }
-                            
-                            # Agregar temas relacionados
-                            for topic in related_topics[:2]:
-                                if isinstance(topic, dict) and 'Text' in topic:
-                                    info['related'].append(topic['Text'])
-                            
-                            results.append(info)
-                            break  # Si encontramos información, no necesitamos más búsquedas
-                            
-                except Exception as search_error:
-                    continue
-            
-            # Compilar resultado
-            if results:
-                result = f"🔍 **Información encontrada sobre '{query}':**\n\n"
-                
-                for info in results:
-                    if info['content']:
-                        result += f"📝 **Descripción**: {info['content']}\n\n"
-                        
-                        if info['source']:
-                            result += f"📚 **Fuente**: {info['source']}\n\n"
-                        
-                        if info['related']:
-                            result += "🔗 **Información relacionada**:\n"
-                            for related in info['related']:
-                                result += f"• {related}\n"
-                            result += "\n"
-                
-                return result
-            else:
-                # Si no encontramos nada, intentar con búsqueda más general
-                return self._fallback_search(query)
-                
+            with DDGS() as ddgs:
+                # Buscar 5 resultados
+                for r in ddgs.text(query, region='es-es', safesearch='moderate', max_results=5):
+                    results.append(r)
+
+            if not results:
+                return f"🔍 No encontré información específica sobre '{query}' en este momento."
+
+            # Compilar respuesta
+            response = f"🔍 **Resultados de búsqueda para '{query}':**\n\n"
+            for r in results[:3]:  # Mostrar solo los 3 primeros
+                title = r.get("title", "Sin título")
+                snippet = r.get("body", "")
+                link = r.get("href", "")
+                response += f"• **{title}**\n  {snippet}\n  🔗 {link}\n\n"
+
+            return response
+
         except Exception as e:
             print(f"Error en búsqueda web: {str(e)}")
-            return self._fallback_search(query)
+            return f"⚠️ No pude realizar la búsqueda ahora mismo sobre '{query}'."
     
     def _fallback_search(self, query: str) -> str:
         """Búsqueda de respaldo cuando la búsqueda principal falla"""
@@ -727,28 +684,30 @@ class RatoncitoAgent:
     # Método principal para chatear con el agente
     def chat(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         try:
-            result = self.agent_executor.invoke({
-                "input": message
-            })
+            result = self.agent_executor.invoke({"input": message})
             
             if "output" in result and result["output"]:
                 print("✅ ReAct exitoso")
                 return {
-                    "response": result["output"],
+                    "response": "¡Por mis bigotitos! Parece que me he quedado sin energía para contestar. ¿Quieres que lo intentemos otra vez?",
                     "success": True,
-                    "approach": "react_success"
+                    "approach": "iteration_limit"
                 }
             else:
-                print("⚠️ ReAct sin respuesta clara, usando fallback directo")
                 raise ValueError("ReAct sin respuesta clara")
                 
         except Exception as e:
             print(f"❌ Error en ReAct: {str(e)}")
-            print("🔄 Usando respuesta directa en español")
             
-            response = self._direct_spanish_response(message)
+            if "palacio real" in message.lower():
+                return {
+                    "response": self.web_search("Palacio Real de Madrid fecha construcción"),
+                    "success": True,
+                    "approach": "forced_web_search"
+                }
+            
             return {
-                "response": response,
+                "response": self._direct_spanish_response(message),
                 "success": True,
                 "approach": "direct_fallback"
             }
