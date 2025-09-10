@@ -9,6 +9,10 @@ class _DummyRetriever:
     def get_relevant_documents(self, _query: str) -> List[Any]:
         return []
 
+    # New API compatibility (LangChain BaseRetriever is Runnable)
+    def invoke(self, _query: str) -> List[Any]:
+        return []
+
 
 def _download_pdfs_from_supabase(tmp_dir: str) -> List[str]:
     url = os.environ.get("SUPABASE_URL")
@@ -16,6 +20,7 @@ def _download_pdfs_from_supabase(tmp_dir: str) -> List[str]:
     bucket = os.environ.get("SUPABASE_BUCKET")
 
     if not url or not key or not bucket:
+        print("[knowledge] SUPABASE env vars missing; skipping PDF download → no PDFs")
         return []
 
     try:
@@ -23,6 +28,7 @@ def _download_pdfs_from_supabase(tmp_dir: str) -> List[str]:
         client = create_client(url, key)
         files = client.storage.from_(bucket).list()
     except Exception:
+        print("[knowledge] Error al listar/descargar desde Supabase; continuing without PDFs")
         return []
 
     pdf_paths: List[str] = []
@@ -46,6 +52,7 @@ def _load_and_split_pdfs(pdf_paths: List[str]):
         from langchain_community.document_loaders import PyPDFLoader
         from langchain.text_splitter import RecursiveCharacterTextSplitter
     except Exception:
+        print("[knowledge] Missing langchain community/text_splitter deps; cannot load PDFs")
         return []
 
     docs: List[Any] = []
@@ -60,6 +67,7 @@ def _load_and_split_pdfs(pdf_paths: List[str]):
     try:
         return splitter.split_documents(docs)
     except Exception:
+        print("[knowledge] Error splitting documents; returning no chunks")
         return []
 
 
@@ -79,25 +87,26 @@ def get_retriever():
         from langchain_community.embeddings import HuggingFaceEmbeddings
         from langchain_community.vectorstores import FAISS
     except Exception:
+        print("[knowledge] Missing embeddings/vectorstore deps; using DummyRetriever")
         _retriever = _DummyRetriever()
         return _retriever
 
     try:
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     except Exception:
+        print("[knowledge] Error creating embeddings; using DummyRetriever")
         _retriever = _DummyRetriever()
         return _retriever
 
     if not pdf_paths:
-        try:
-            _retriever = FAISS.from_texts([""], embeddings).as_retriever(search_kwargs={"k": 4})
-            return _retriever
-        except Exception:
-            _retriever = _DummyRetriever()
-            return _retriever
+        # Avoid creating a vector store with empty text, which yields empty page_content hits
+        print("[knowledge] No PDFs found to index; using DummyRetriever")
+        _retriever = _DummyRetriever()
+        return _retriever
 
     chunks = _load_and_split_pdfs(pdf_paths)
     if not chunks:
+        print("[knowledge] No chunks produced from PDFs; using DummyRetriever")
         _retriever = _DummyRetriever()
         return _retriever
 
@@ -106,6 +115,7 @@ def get_retriever():
         _retriever = vectordb.as_retriever(search_kwargs={"k": 4})
         return _retriever
     except Exception:
+        print("[knowledge] Error building FAISS index; using DummyRetriever")
         _retriever = _DummyRetriever()
         return _retriever
 

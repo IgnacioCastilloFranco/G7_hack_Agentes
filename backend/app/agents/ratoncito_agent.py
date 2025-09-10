@@ -36,6 +36,7 @@ class RatoncitoAgent:
 
         print(f"🐭 Ratoncito Pérez inicializado con personalidad: {self.personality}")
         print(f"🧠 Modelo: {settings.LLM_MODEL}")
+        print(f"📦 Retriever activo: {type(self.retriever).__name__}")
 
     def create_llm(self) -> ChatGroq:
         return ChatGroq(
@@ -113,20 +114,29 @@ class RatoncitoAgent:
 
     def search_knowledge(self, query: str) -> str:
         try:
-            docs = self.retriever.get_relevant_documents(query)
+            # Use new retriever API when available
+            if hasattr(self.retriever, "invoke"):
+                docs = self.retriever.invoke(query)
+            else:
+                docs = self.retriever.get_relevant_documents(query)
         except Exception as e:
             return f"Error al buscar en la base de conocimiento: {str(e)}"
 
+        print(f"🔍 Buscando en la base de conocimiento: {query}")
+        print(f"📄 numero de Documentos encontrados: {len(docs)}")
+        print(f"📄 Documentos encontrados: {docs}")
         if not docs:
             return "No encontré información relevante en los PDFs."
 
         snippets: List[str] = []
         for d in docs:
-            text = (d.page_content or "").strip()
+            text = (getattr(d, "page_content", "") or "").strip()
             if text:
                 snippets.append(text[:600])
             if len(snippets) >= 4:
                 break
+        if not snippets:
+            return "No encontré contenido útil en los documentos recuperados."
         return "\n\n".join(snippets)
 
 
