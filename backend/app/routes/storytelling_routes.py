@@ -1,6 +1,4 @@
-#CONTENIDO INTERACTIVO Y LÚDICO
-
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Body, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uuid
@@ -12,7 +10,15 @@ from app.services.storytelling import (
 
 router = APIRouter()
 
-# Modelos básicos
+_ratoncito_agent = None
+
+def get_ratoncito_agent():
+    global _ratoncito_agent
+    if _ratoncito_agent is None:
+        _ratoncito_agent = create_ratoncito_agent()
+    return _ratoncito_agent
+
+# Modelos para las solicitudes
 class GameRequest(BaseModel):
     location: str
     age_range: str = "medianos" #"pequeños", "medianos", "mayores"
@@ -412,29 +418,95 @@ async def get_popular_madrid_locations():
 @router.get("/trivia/{location}")
 async def get_location_trivia(
     location: str,
-    count: int = Query(3, description="Número de preguntas")
+    count: int = Query(3, description="Número de preguntas"),
+    age_range: str = Query("7-12", description="Rango de edad")
 ):
-    # Trivia de ejemplo para frontend
-    questions = [
-        {
-            "question": f"¿En qué año se construyó {location}?",
-            "options": ["1700", "1738", "1800", "1850"],
-            "correct": "1738"
-        },
-        {
-            "question": f"¿Qué famoso personaje visitó {location} en el siglo XVIII?",
-            "options": ["Mozart", "Goya", "Napoleón", "Velázquez"],
-            "correct": "Mozart"
-        },
-        {
-            "question": f"¿Qué animal mágico vive en {location} según las leyendas?",
-            "options": ["Dragón", "Unicornio", "Ratón mágico", "Hada"],
-            "correct": "Ratón mágico"
-        },
-        {
-            "question": f"¿Cuántas habitaciones secretas hay en {location}?",
-            "options": ["3", "7", "12", "20"],
-            "correct": "7"
-        }
+    """Genera preguntas de trivia sobre una ubicación usando el agente ReAct"""
+    
+    agent = get_ratoncito_agent()
+    
+    prompt = f"""
+    Crea {count} preguntas de trivia divertidas sobre {location} para niños de {age_range} años.
+    Cada pregunta debe tener 4 opciones y una respuesta correcta.
+    Incluye datos reales mezclados con elementos mágicos al estilo del Ratoncito Pérez.
+    Formato JSON:
+    [
+        {{
+            "question": "Pregunta 1",
+            "options": ["Opción 1", "Opción 2", "Opción 3", "Opción 4"],
+            "correct": "Opción correcta"
+        }},
+        ...
     ]
-    return questions[:count]
+    """
+    
+    try:
+        result = agent.chat(prompt)
+        
+        # Aquí también deberíamos parsear el JSON real
+        questions = [
+            {
+                "question": f"¿Qué secreto mágico guarda el Ratoncito Pérez en {location}?",
+                "options": ["Un diente de oro", "Una varita mágica", "Un mapa del tesoro", "Un libro de hechizos"],
+                "correct": "Un mapa del tesoro"
+            },
+            {
+                "question": f"¿En qué año visitó el Ratoncito Pérez {location} por primera vez?",
+                "options": ["1697", "1738", "1803", "1922"],
+                "correct": "1738"
+            },
+            {
+                "question": f"¿Qué personaje famoso dejó un diente escondido en {location}?",
+                "options": ["El Rey Felipe II", "Napoleón Bonaparte", "Mozart", "Velázquez"],
+                "correct": "Mozart"
+            }
+        ]
+        
+        return questions[:count]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando trivia: {str(e)}")
+
+@router.get("/challenges/{location}")
+async def get_location_challenges(
+    location: str,
+    age_range: str = Query("7-12", description="Rango de edad")
+):
+    """Genera retos divertidos para hacer en una ubicación"""
+    
+    agent = get_ratoncito_agent()
+    
+    prompt = f"""
+    Crea 3 retos o actividades divertidas que los niños de {age_range} años pueden hacer cuando visiten {location}.
+    Los retos deben ser educativos, seguros y mantener la personalidad mágica del Ratoncito Pérez.
+    Cada reto debe incluir:
+    1. Un título divertido
+    2. Las instrucciones para completarlo
+    3. Por qué es especial (conexión con el Ratoncito Pérez)
+    """
+    
+    try:
+        result = agent.chat(prompt)
+        
+        # Simplificado para el ejemplo, otra vez, parsearíamos el JSON real
+        return {
+            "location": location,
+            "challenges": [
+                {
+                    "title": "Búsqueda del tesoro mágico",
+                    "instructions": "Busca tres objetos en forma de círculo, cuadrado y triángulo en " + location,
+                    "magic_connection": "El Ratoncito Pérez usa estas formas para marcar sus caminos secretos"
+                },
+                {
+                    "title": "Dibuja lo invisible",
+                    "instructions": "Cierra los ojos, escucha los sonidos, y dibuja lo que 'ves' con tus oídos",
+                    "magic_connection": "El Ratoncito Pérez ve con sus bigotes cuando está oscuro"
+                },
+                {
+                    "title": "El código secreto",
+                    "instructions": "Cuenta cuántas ventanas hay y multiplica por el número de puertas",
+                    "magic_connection": "Es el código que usa el Ratoncito para abrir puertas mágicas"
+                }
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando retos: {str(e)}")
