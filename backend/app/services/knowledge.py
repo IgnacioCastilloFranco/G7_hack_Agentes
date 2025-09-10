@@ -122,6 +122,7 @@ def get_retriever():
 
     chunks = _load_and_split_pdfs(pdf_paths)
     if not chunks:
+        print("[knowledge] No chunks produced from PDFs; using DummyRetriever")
         _retriever = _DummyRetriever()
         return _retriever
 
