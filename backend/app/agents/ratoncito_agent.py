@@ -28,6 +28,7 @@ class RatoncitoAgent:
             raise ValueError("GROQ_API_KEY no está configurada en .env")
 
         self.personality = personality or settings.RATONCITO_PERSONALITY
+        self.current_site_context = None  # Para recordar el sitio actual de conversación
         self.llm = self.create_llm()
         self.memory = self.create_memory()
         self.tools = self.create_tools()
@@ -67,18 +68,13 @@ class RatoncitoAgent:
             ),
             Tool(
                 name="busqueda_especializada",
-                description="Realiza búsquedas especializadas para lugares específicos o poco conocidos de Madrid",
+                description="Realiza búsquedas especializadas para lugares específicos o poco conocidos de Madrid. Usa esta herramienta siempre que necesites buscar información sobre cualquier sitio o lugar de Madrid.",
                 func=self.specialized_search
             ),
             Tool(
                 name="contexto_historico_cultural",
                 description="Usa cuando necesites proporcionar información histórica y cultural detallada sobre un sitio específico de Madrid. Incluye historia, arquitectura, curiosidades y elementos mágicos.",
                 func=self.historical_cultural_context
-            ),
-            Tool(
-                name="busqueda_web",
-                description="Usa cuando necesites buscar información actualizada en internet sobre Madrid, eventos, noticias, horarios, o cualquier información que no tengas disponible localmente.",
-                func=self.web_search
             ),
             Tool(
                 name="documentos_madrid",
@@ -102,7 +98,7 @@ class RatoncitoAgent:
             verbose=settings.AGENT_VERBOSE,
             max_iterations=settings.AGENT_MAX_ITERATIONS,
             handle_parsing_errors=True,
-            early_stopping_method="generate",  
+            early_stopping_method="force",  
             return_intermediate_steps=False
             )
     
@@ -116,7 +112,40 @@ class RatoncitoAgent:
         # ]
         # return random.choice(greetings)
     
+    def detect_site_context(self, query: str) -> str:
+        """Detecta si la pregunta se refiere a un sitio específico o necesita contexto"""
+        query_lower = query.lower()
+        
+        # Detectar sitios específicos mencionados
+        site_keywords = {
+            "palacio real": "Palacio Real",
+            "plaza mayor": "Plaza Mayor", 
+            "retiro": "Parque del Retiro",
+            "puerta del sol": "Puerta del Sol",
+            "calle arenal": "Calle Arenal",
+            "centro ferroviario": "Centro de Iniciativas Ferroviarias Vapor Madrid",
+            "vapor madrid": "Centro de Iniciativas Ferroviarias Vapor Madrid",
+            "callao": "Plaza de Callao",
+            "santoña": "Palacio de Santoña"
+        }
+        
+        for keyword, site_name in site_keywords.items():
+            if keyword in query_lower:
+                self.current_site_context = site_name
+                return site_name
+                
+        # Si no se detecta sitio específico pero hay contexto previo
+        if self.current_site_context and any(word in query_lower for word in ["cuando", "construido", "historia", "año", "fecha"]):
+            return self.current_site_context
+            
+        return None
+
     def madrid_info(self, place: str) -> str:
+        # Detectar contexto del sitio
+        detected_site = self.detect_site_context(place)
+        if detected_site:
+            self.current_site_context = detected_site
+            
         places = {
             "palacio real": "¡Por mis bigotitos! El Palacio Real es una joya arquitectónica donde vivían los reyes. ¡Tiene más de 3000 habitaciones! Yo tengo mi propia habitación secreta ahí donde guardo los dientes más especiales que me dais... 🏰 ¿Sabéis que por las noches los cuadros cobran vida?",
             "plaza mayor": "¡Qué lugar tan mágico! La Plaza Mayor es como el corazón de Madrid, donde se celebraban fiestas y mercados. ¡He visto tantas celebraciones desde mis escondites en los balcones! Por las noches de luna llena, bajamos todos los ratones y organizamos bailes secretos... 🎉",
@@ -137,13 +166,13 @@ class RatoncitoAgent:
         # 🚨 Caso especial: si preguntan por el propio Ratoncito Pérez
         if "perez" in site_lower or "ratoncito" in site_lower:
             return """¡Por mis bigotitos! 🐭✨ Yo mismo soy el Ratoncito Pérez.
-    Algunas curiosidades mágicas sobre mí son:
-    - Vivo en una casita secreta en la Calle Arenal, número 8.
-    - Guardo los dientes de leche en cofres encantados llenos de polvo de estrellas.
-    - Trabajo junto con hadas de los dientes de todo el mundo.
-    - A veces viajo en trenes de juguete que cobran vida de noche para recorrer Madrid.
+                Algunas curiosidades mágicas sobre mí son:
+                - Vivo en una casita secreta en la Calle Arenal, número 8.
+                - Guardo los dientes de leche en cofres encantados llenos de polvo de estrellas.
+                - Trabajo junto con hadas de los dientes de todo el mundo.
+                - A veces viajo en trenes de juguete que cobran vida de noche para recorrer Madrid.
 
-    ¿Quieres que te cuente cómo empezó mi misión mágica de recoger dientes? ✨"""
+                ¿Quieres que te cuente cómo empezó mi misión mágica de recoger dientes? ✨"""
         
         historical_contexts = {
             "palacio real": {
@@ -189,15 +218,15 @@ class RatoncitoAgent:
             if key in site_lower or any(word in site_lower for word in key.split()):
                 return f"""¡Por mis bigotitos! Te voy a contar la historia mágica de este lugar extraordinario... ✨
 
-🏛️ **Historia**: {context['history']}
+                        🏛️ **Historia**: {context['history']}
 
-🎨 **Arquitectura**: {context['architecture']}
+                        🎨 **Arquitectura**: {context['architecture']}
 
-🔍 **Curiosidades**: {context['curiosities']}
+                        🔍 **Curiosidades**: {context['curiosities']}
 
-✨ **Secretos Mágicos**: {context['magic']}
+                        ✨ **Secretos Mágicos**: {context['magic']}
 
-¿Te gustaría que te cuente más secretos sobre este lugar encantado? ¡Tengo tantas historias guardadas en mi casita de la Calle Arenal! 🐭"""
+                        ¿Te gustaría que te cuente más secretos sobre este lugar encantado? ¡Tengo tantas historias guardadas en mi casita de la Calle Arenal! 🐭"""
         
         # Si no encuentra información específica, proporciona una respuesta genérica mágica
         return f"""¡Por mis bigotitos! Aunque '{site_name}' es un lugar muy especial, no tengo todos los detalles mágicos guardados en mi memoria. Pero puedo contarte que cada rincón de Madrid tiene su propia historia encantada... ✨
@@ -207,17 +236,30 @@ class RatoncitoAgent:
     def web_search(self, query: str) -> str:
         """Realiza una búsqueda web real con DuckDuckGo y devuelve snippets útiles"""
         try:
+            # Detectar contexto del sitio en la consulta
+            detected_site = self.detect_site_context(query)
+            
+            # Si hay contexto del sitio, mejorar la consulta
+            search_query = query
+            if detected_site:
+                search_query = f"{detected_site} {query} Madrid"
+            elif self.current_site_context:
+                search_query = f"{self.current_site_context} {query} Madrid"
+            else:
+                search_query = f"{query} Madrid"
+            
             results = []
             with DDGS() as ddgs:
                 # Buscar 5 resultados
-                for r in ddgs.text(query, region='es-es', safesearch='moderate', max_results=5):
+                for r in ddgs.text(search_query, region='es-es', safesearch='moderate', max_results=5):
                     results.append(r)
 
             if not results:
                 return f"🔍 No encontré información específica sobre '{query}' en este momento."
 
             # Compilar respuesta
-            response = f"🔍 **Resultados de búsqueda para '{query}':**\n\n"
+            context_info = f" sobre {detected_site or self.current_site_context}" if (detected_site or self.current_site_context) else ""
+            response = f"🔍 **Resultados de búsqueda para '{query}'{context_info}:**\n\n"
             for r in results[:3]:  # Mostrar solo los 3 primeros
                 title = r.get("title", "Sin título")
                 snippet = r.get("body", "")
@@ -402,254 +444,254 @@ class RatoncitoAgent:
             "transporte": {
                 "title": "🚇 Transporte Público de Madrid",
                 "content": """
-**Metro de Madrid**: La red de metro más extensa de España con 13 líneas y más de 300 estaciones.
-• **Horarios**: De 6:00 a 1:30 (viernes y sábados hasta las 2:00)
-• **Tarifas**: Billete sencillo 1,50-2,00€, Abono mensual desde 54,60€
-• **Líneas principales**: L1 (Pinar de Chamartín-Valdecarros), L6 (Circular)
+                            **Metro de Madrid**: La red de metro más extensa de España con 13 líneas y más de 300 estaciones.
+                            • **Horarios**: De 6:00 a 1:30 (viernes y sábados hasta las 2:00)
+                            • **Tarifas**: Billete sencillo 1,50-2,00€, Abono mensual desde 54,60€
+                            • **Líneas principales**: L1 (Pinar de Chamartín-Valdecarros), L6 (Circular)
 
-**Autobuses EMT**: Más de 200 líneas de autobuses urbanos
-• **Búhos**: Servicio nocturno los fines de semana
-• **Líneas especiales**: Aeropuerto, hospitales, universidades
+                            **Autobuses EMT**: Más de 200 líneas de autobuses urbanos
+                            • **Búhos**: Servicio nocturno los fines de semana
+                            • **Líneas especiales**: Aeropuerto, hospitales, universidades
 
-**Cercanías**: Conexión con municipios del área metropolitana
-• **C1-C10**: 10 líneas que conectan Madrid con la Comunidad
+                            **Cercanías**: Conexión con municipios del área metropolitana
+                            • **C1-C10**: 10 líneas que conectan Madrid con la Comunidad
 
-**BiciMAD**: Sistema de bicicletas públicas eléctricas
-• Más de 250 estaciones en el centro de Madrid
-"""
+                            **BiciMAD**: Sistema de bicicletas públicas eléctricas
+                            • Más de 250 estaciones en el centro de Madrid
+                            """
             },
             "centro_ferroviario": {
                 "title": "🚂 Centro de Iniciativas Ferroviarias Vapor Madrid",
                 "content": """
-**Centro de Iniciativas Ferroviarias Vapor Madrid**: Asociación sin ánimo de lucro dedicada a la preservación del patrimonio ferroviario español.
+                        **Centro de Iniciativas Ferroviarias Vapor Madrid**: Asociación sin ánimo de lucro dedicada a la preservación del patrimonio ferroviario español.
 
-**Actividades principales**:
-• Organización de excursiones en trenes históricos
-• Mantenimiento de material rodante vintage
-• Promoción de la cultura ferroviaria española
-• Eventos temáticos sobre la historia del ferrocarril
+                        **Actividades principales**:
+                        • Organización de excursiones en trenes históricos
+                        • Mantenimiento de material rodante vintage
+                        • Promoción de la cultura ferroviaria española
+                        • Eventos temáticos sobre la historia del ferrocarril
 
-**Trenes históricos que organizan**:
-• Tren de la Fresa (Madrid-Aranjuez)
-• Tren de Cervantes (Madrid-Alcalá de Henares)
-• Excursiones especiales con locomotoras de vapor
+                        **Trenes históricos que organizan**:
+                        • Tren de la Fresa (Madrid-Aranjuez)
+                        • Tren de Cervantes (Madrid-Alcalá de Henares)
+                        • Excursiones especiales con locomotoras de vapor
 
-**Ubicación**: Calle Camino de la Depuradora
-• Colaboran con el Museo del Ferrocarril de Madrid
-• Actividades familiares y educativas
-• Talleres de restauración de material histórico
+                        **Ubicación**: Calle Camino de la Depuradora
+                        • Colaboran con el Museo del Ferrocarril de Madrid
+                        • Actividades familiares y educativas
+                        • Talleres de restauración de material histórico
 
-**Patrimonio ferroviario relacionado**:
-• Estación de Delicias (actual Museo del Ferrocarril)
-• Estación de Príncipe Pío
-• Estación de Atocha con su jardín tropical
-"""
+                        **Patrimonio ferroviario relacionado**:
+                        • Estación de Delicias (actual Museo del Ferrocarril)
+                        • Estación de Príncipe Pío
+                        • Estación de Atocha con su jardín tropical
+                        """
             },
             "callao": {
                 "title": "🏛️ Plaza de Callao",
                 "content": """
-**Historia**: Inaugurada en 1943, nombrada en honor a la batalla del Callao (Perú, 1866)
+                    **Historia**: Inaugurada en 1943, nombrada en honor a la batalla del Callao (Perú, 1866)
 
-**Arquitectura destacada**:
-• **Edificio Carrión**: Icónico rascacielos art déco de 1933
-• **Palacio de la Prensa**: Sede histórica de medios de comunicación
-• **Cines Callao**: Complejo cinematográfico emblemático
+                    **Arquitectura destacada**:
+                    • **Edificio Carrión**: Icónico rascacielos art déco de 1933
+                    • **Palacio de la Prensa**: Sede histórica de medios de comunicación
+                    • **Cines Callao**: Complejo cinematográfico emblemático
 
-**Características**:
-• Centro neurálgico del ocio y las compras madrileñas
-• Conexión entre Gran Vía y Preciados
-• Estación de Metro: Callao (L3, L5)
+                    **Características**:
+                    • Centro neurálgico del ocio y las compras madrileñas
+                    • Conexión entre Gran Vía y Preciados
+                    • Estación de Metro: Callao (L3, L5)
 
-**Curiosidades mágicas**:
-• Las luces de neón crean un espectáculo nocturno único
-• Punto de encuentro tradicional de los madrileños
-"""
+                    **Curiosidades mágicas**:
+                    • Las luces de neón crean un espectáculo nocturno único
+                    • Punto de encuentro tradicional de los madrileños
+                    """
             },
             "santona": {
                 "title": "🏰 Palacio de Santoña",
                 "content": """
-**Historia**: Construido en el siglo XVIII, residencia de la Duquesa de Santoña
+                    **Historia**: Construido en el siglo XVIII, residencia de la Duquesa de Santoña
 
-**Arquitectura**:
-• Estilo neoclásico con influencias francesas
-• Fachada de piedra caliza con elementos decorativos únicos
-• Jardines privados con diseño paisajístico histórico
+                    **Arquitectura**:
+                    • Estilo neoclásico con influencias francesas
+                    • Fachada de piedra caliza con elementos decorativos únicos
+                    • Jardines privados con diseño paisajístico histórico
 
-**La Duquesa de Santoña**:
-• María del Pilar Muñoz y Borbón (1861-1926)
-• Mecenas de las artes y la cultura madrileña
-• Organizaba tertulias literarias y musicales
+                    **La Duquesa de Santoña**:
+                    • María del Pilar Muñoz y Borbón (1861-1926)
+                    • Mecenas de las artes y la cultura madrileña
+                    • Organizaba tertulias literarias y musicales
 
-**Actualidad**:
-• Sede de la Cámara de Comercio de Madrid
-• Salones para eventos culturales y empresariales
-• Visitas guiadas en ocasiones especiales
-"""
+                    **Actualidad**:
+                    • Sede de la Cámara de Comercio de Madrid
+                    • Salones para eventos culturales y empresariales
+                    • Visitas guiadas en ocasiones especiales
+                    """
             },
             "paisaje_luz": {
                 "title": "🌟 Paisaje de la Luz",
                 "content": """
-**Patrimonio Mundial UNESCO** (2021): Eje cultural Prado-Retiro
+                            **Patrimonio Mundial UNESCO** (2021): Eje cultural Prado-Retiro
 
-**Componentes principales**:
-• **Museo del Prado**: Pinacoteca más importante del mundo
-• **Parque del Retiro**: Pulmón verde histórico de Madrid
-• **Real Jardín Botánico**: Colección científica desde 1781
-• **Museo Thyssen-Bornemisza**: Arte desde el s.XIII al XX
-• **Museo Reina Sofía**: Arte contemporáneo español
+                            **Componentes principales**:
+                            • **Museo del Prado**: Pinacoteca más importante del mundo
+                            • **Parque del Retiro**: Pulmón verde histórico de Madrid
+                            • **Real Jardín Botánico**: Colección científica desde 1781
+                            • **Museo Thyssen-Bornemisza**: Arte desde el s.XIII al XX
+                            • **Museo Reina Sofía**: Arte contemporáneo español
 
-**Valor excepcional**:
-• Concentración única de arte y naturaleza
-• Evolución urbana desde el siglo XVI
-• Ejemplo de paisaje cultural urbano
+                            **Valor excepcional**:
+                            • Concentración única de arte y naturaleza
+                            • Evolución urbana desde el siglo XVI
+                            • Ejemplo de paisaje cultural urbano
 
-**Paseo del Arte**: Recorrido cultural entre los tres grandes museos
-"""
+                            **Paseo del Arte**: Recorrido cultural entre los tres grandes museos
+                            """
             },
             "gastronomia": {
                 "title": "🍽️ Gastronomía de Madrid",
                 "content": """
-**Platos típicos madrileños**:
-• **Cocido madrileño**: Guiso tradicional de garbanzos, verduras y carnes
-• **Callos a la madrileña**: Estofado de callos con chorizo y morcilla
-• **Soldaditos de Pavía**: Bacalao rebozado típico de tabernas
-• **Huevos estrellados**: Con patatas fritas y jamón ibérico
+                        **Platos típicos madrileños**:
+                        • **Cocido madrileño**: Guiso tradicional de garbanzos, verduras y carnes
+                        • **Callos a la madrileña**: Estofado de callos con chorizo y morcilla
+                        • **Soldaditos de Pavía**: Bacalao rebozado típico de tabernas
+                        • **Huevos estrellados**: Con patatas fritas y jamón ibérico
 
-**Dulces tradicionales**:
-• **Torrijas**: Postre típico de Semana Santa
-• **Rosquillas**: De San Isidro (tontas, listas, de Santa Clara)
-• **Bartolillos**: Dulce frito relleno de crema
+                        **Dulces tradicionales**:
+                        • **Torrijas**: Postre típico de Semana Santa
+                        • **Rosquillas**: De San Isidro (tontas, listas, de Santa Clara)
+                        • **Bartolillos**: Dulce frito relleno de crema
 
-**Mercados gastronómicos**:
-• **Mercado de San Miguel**: Gourmet en el centro histórico
-• **Mercado de San Antón**: Tres plantas de gastronomía
-• **Mercado de la Paz**: Productos frescos en Salamanca
+                        **Mercados gastronómicos**:
+                        • **Mercado de San Miguel**: Gourmet en el centro histórico
+                        • **Mercado de San Antón**: Tres plantas de gastronomía
+                        • **Mercado de la Paz**: Productos frescos en Salamanca
 
-**Tabernas centenarias**:
-• Casa Botín (1725): El restaurante más antiguo del mundo
-• Lhardy (1839): Tradición culinaria madrileña
-"""
+                        **Tabernas centenarias**:
+                        • Casa Botín (1725): El restaurante más antiguo del mundo
+                        • Lhardy (1839): Tradición culinaria madrileña
+                        """
             },
             "festividades": {
                 "title": "🎉 Festividades de Madrid",
                 "content": """
-**San Isidro** (15 de mayo): Patrón de Madrid
-• Feria taurina en Las Ventas
-• Verbenas populares en parques
-• Rosquillas y limonada tradicionales
+                        **San Isidro** (15 de mayo): Patrón de Madrid
+                        • Feria taurina en Las Ventas
+                        • Verbenas populares en parques
+                        • Rosquillas y limonada tradicionales
 
-**Dos de Mayo**: Conmemoración del levantamiento de 1808
-• Actos en Malasaña y el centro histórico
-• Recreaciones históricas
+                        **Dos de Mayo**: Conmemoración del levantamiento de 1808
+                        • Actos en Malasaña y el centro histórico
+                        • Recreaciones históricas
 
-**La Paloma** (15 de agosto): Virgen de La Paloma
-• Verbenas en La Latina
-• Chotis y música tradicional
-• Decoración de calles y balcones
+                        **La Paloma** (15 de agosto): Virgen de La Paloma
+                        • Verbenas en La Latina
+                        • Chotis y música tradicional
+                        • Decoración de calles y balcones
 
-**Navidad**:
-• Mercado navideño en Plaza Mayor
-• Cabalgata de Reyes (5 de enero)
-• Belén del Ayuntamiento
+                        **Navidad**:
+                        • Mercado navideño en Plaza Mayor
+                        • Cabalgata de Reyes (5 de enero)
+                        • Belén del Ayuntamiento
 
-**Carnaval**: Celebración en febrero
-• Desfile por el centro de Madrid
-• Concursos de disfraces
-• Entierro de la Sardina
+                        **Carnaval**: Celebración en febrero
+                        • Desfile por el centro de Madrid
+                        • Concursos de disfraces
+                        • Entierro de la Sardina
 
-**Eventos culturales**:
-• Noche en Blanco: Museos gratuitos toda la noche
-• Festival de Otoño: Teatro y danza
-• PhotoEspaña: Festival internacional de fotografía
-"""
+                        **Eventos culturales**:
+                        • Noche en Blanco: Museos gratuitos toda la noche
+                        • Festival de Otoño: Teatro y danza
+                        • PhotoEspaña: Festival internacional de fotografía
+                        """
             },
             "madrid_destino": {
                 "title": "🏛️ Madrid Destino - Gestión Cultural y Turística",
                 "content": """
-**Madrid Destino**: Empresa pública de gestión cultural y turística
+                            **Madrid Destino**: Empresa pública de gestión cultural y turística
 
-**Funciones principales**:
-• Promoción turística de Madrid a nivel nacional e internacional
-• Gestión de espacios culturales municipales
-• Organización de eventos y festivales
-• Desarrollo de productos turísticos
+                            **Funciones principales**:
+                            • Promoción turística de Madrid a nivel nacional e internacional
+                            • Gestión de espacios culturales municipales
+                            • Organización de eventos y festivales
+                            • Desarrollo de productos turísticos
 
-**Espacios gestionados**:
-• Matadero Madrid: Centro de creación contemporánea
-• Conde Duque: Centro cultural multidisciplinar
-• Medialab Prado: Laboratorio ciudadano
-• Naves del Español: Teatro y artes escénicas
+                            **Espacios gestionados**:
+                            • Matadero Madrid: Centro de creación contemporánea
+                            • Conde Duque: Centro cultural multidisciplinar
+                            • Medialab Prado: Laboratorio ciudadano
+                            • Naves del Español: Teatro y artes escénicas
 
-**Programas destacados**:
-• Madrid es Ciencia: Divulgación científica
-• Veranos de la Villa: Festival de verano
-• Madrid Fashion Week: Semana de la moda
+                            **Programas destacados**:
+                            • Madrid es Ciencia: Divulgación científica
+                            • Veranos de la Villa: Festival de verano
+                            • Madrid Fashion Week: Semana de la moda
 
-**Turismo sostenible**:
-• Rutas temáticas especializadas
-• Promoción del turismo responsable
-• Colaboración con sector privado
-"""
+                            **Turismo sostenible**:
+                            • Rutas temáticas especializadas
+                            • Promoción del turismo responsable
+                            • Colaboración con sector privado
+                            """
             },
             "martinuca": {
                 "title": "🎭 La Martinuca - Cultura Popular Madrileña",
                 "content": """
-**La Martinuca**: Personaje tradicional del folclore madrileño
+                        **La Martinuca**: Personaje tradicional del folclore madrileño
 
-**Características**:
-• Representación de la mujer trabajadora del Madrid castizo
-• Vestimenta típica: mantón de Manila, peineta y flores
-• Símbolo de la identidad popular madrileña
+                        **Características**:
+                        • Representación de la mujer trabajadora del Madrid castizo
+                        • Vestimenta típica: mantón de Manila, peineta y flores
+                        • Símbolo de la identidad popular madrileña
 
-**Tradiciones asociadas**:
-• Verbenas de San Isidro y La Paloma
-• Bailes tradicionales: chotis, seguidillas
-• Coplas y canciones populares
+                        **Tradiciones asociadas**:
+                        • Verbenas de San Isidro y La Paloma
+                        • Bailes tradicionales: chotis, seguidillas
+                        • Coplas y canciones populares
 
-**Lugares emblemáticos**:
-• Barrios de La Latina y Lavapiés
-• Rastro dominical
-• Tabernas centenarias
+                        **Lugares emblemáticos**:
+                        • Barrios de La Latina y Lavapiés
+                        • Rastro dominical
+                        • Tabernas centenarias
 
-**Influencia cultural**:
-• Literatura costumbrista del siglo XIX
-• Zarzuela y teatro popular
-• Festivales de música tradicional
+                        **Influencia cultural**:
+                        • Literatura costumbrista del siglo XIX
+                        • Zarzuela y teatro popular
+                        • Festivales de música tradicional
 
-**Actualidad**:
-• Recuperación de tradiciones en fiestas populares
-• Grupos folclóricos y asociaciones culturales
-• Turismo cultural temático
-"""
+                        **Actualidad**:
+                        • Recuperación de tradiciones en fiestas populares
+                        • Grupos folclóricos y asociaciones culturales
+                        • Turismo cultural temático
+                        """
             },
             "lugares_especiales": {
                 "title": "🏛️ Lugares Especiales de Madrid",
                 "content": """
-**Sitios menos conocidos pero fascinantes**:
+                        **Sitios menos conocidos pero fascinantes**:
 
-**Estación de Delicias - Museo del Ferrocarril**:
-• Antigua estación de tren del siglo XIX
-• Arquitectura de hierro y cristal única
-• Colección de locomotoras históricas
-• Exposiciones sobre la historia ferroviaria española
+                        **Estación de Delicias - Museo del Ferrocarril**:
+                        • Antigua estación de tren del siglo XIX
+                        • Arquitectura de hierro y cristal única
+                        • Colección de locomotoras históricas
+                        • Exposiciones sobre la historia ferroviaria española
 
-**Palacio de Santoña**:
-• Elegante palacio del siglo XVIII
-• Residencia histórica de la Duquesa de Santoña
-• Actualmente sede de la Cámara de Comercio
-• Arquitectura neoclásica con jardines privados
+                        **Palacio de Santoña**:
+                        • Elegante palacio del siglo XVIII
+                        • Residencia histórica de la Duquesa de Santoña
+                        • Actualmente sede de la Cámara de Comercio
+                        • Arquitectura neoclásica con jardines privados
 
-**Plaza de Callao**:
-• Centro neurálgico del ocio madrileño
-• Edificio Carrión (rascacielos art déco)
-• Cines históricos y tiendas emblemáticas
-• Punto de encuentro tradicional
+                        **Plaza de Callao**:
+                        • Centro neurálgico del ocio madrileño
+                        • Edificio Carrión (rascacielos art déco)
+                        • Cines históricos y tiendas emblemáticas
+                        • Punto de encuentro tradicional
 
-**Centros culturales alternativos**:
-• Matadero Madrid: Arte contemporáneo
-• Conde Duque: Programación multidisciplinar
-• Medialab Prado: Innovación y tecnología
-"""
+                        **Centros culturales alternativos**:
+                        • Matadero Madrid: Arte contemporáneo
+                        • Conde Duque: Programación multidisciplinar
+                        • Medialab Prado: Innovación y tecnología
+                        """
             }
         }
         
@@ -682,15 +724,50 @@ class RatoncitoAgent:
 
     # Método principal para chatear con el agente
     def chat(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        import threading
+        import time
+        
         try:
-            result = self.agent_executor.invoke({"input": message})
+            # Preparar el contexto del sitio para el prompt
+            site_context = ""
+            if self.current_site_context:
+                site_context = f"El usuario está preguntando sobre: {self.current_site_context}"
             
-            if "output" in result and result["output"]:
+            # Incluir contexto del sitio en el mensaje si está disponible
+            enhanced_message = message
+            if site_context:
+                enhanced_message = f"{site_context}. {message}"
+            
+            # Ejecutar con timeout usando threading
+            result_container = {"result": None, "error": None}
+            
+            def execute_agent():
+                try:
+                    result_container["result"] = self.agent_executor.invoke({
+                        "input": enhanced_message
+                    })
+                except Exception as e:
+                    result_container["error"] = e
+            
+            thread = threading.Thread(target=execute_agent)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout=30)  # 30 segundos timeout
+            
+            if thread.is_alive():
+                print("⏰ Timeout en ReAct, usando fallback")
+                raise ValueError("Agent timeout")
+            
+            if result_container["error"]:
+                raise result_container["error"]
+            
+            result = result_container["result"]
+            if result and "output" in result and result["output"]:
                 print("✅ ReAct exitoso")
                 return {
-                    "response": "¡Por mis bigotitos! Parece que me he quedado sin energía para contestar. ¿Quieres que lo intentemos otra vez?",
+                    "response": result["output"],
                     "success": True,
-                    "approach": "iteration_limit"
+                    "approach": "react_success"
                 }
             else:
                 raise ValueError("ReAct sin respuesta clara")

@@ -49,12 +49,12 @@ const Chat = ({ initialContext }) => {
     setError(null);
 
     try {
-      const response = await sendReactChatMessage(currentInput, newMessages);
+      const response = await sendReactChatMessage(currentInput, newMessages, initialContext?.data);
       setMessages(prev => [...prev, { sender: 'ratoncito', text: response.response }]);
     } catch (err) {
       setError("¡Uy! Mis antenas mágicas no funcionan bien. ¿Podemos intentarlo de nuevo?");
       setInput(currentInput);
-      setMessages(messages);
+      setMessages(messages, err);
     } finally {
       setIsLoading(false);
     }

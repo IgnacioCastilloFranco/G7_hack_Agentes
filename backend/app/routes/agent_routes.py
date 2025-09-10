@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 from app.agents.ratoncito_agent import create_ratoncito_agent
 from app.agents.simple_ratoncito import create_magic_ratoncito_agent
+from app.agents.ratoncito_adapter import create_ratoncito_agent as create_adaptive_agent
 from fastapi.responses import HTMLResponse
 
 router = APIRouter()
@@ -11,6 +12,7 @@ class ChatRequest(BaseModel):
     message: str
     location: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
+    chat_history: Optional[List[Dict[str, str]]] = []
     
 class ChatResponse(BaseModel):
     response: str
@@ -20,6 +22,7 @@ class ChatResponse(BaseModel):
 
 _ratoncito_react = None
 _ratoncito_simple = None
+_ratoncito_adaptive = None
 
 def get_react_agent():
     global _ratoncito_react
@@ -33,19 +36,40 @@ def get_simple_agent():
         _ratoncito_simple = create_magic_ratoncito_agent()
     return _ratoncito_simple
 
+def get_adaptive_agent():
+    global _ratoncito_adaptive
+    if _ratoncito_adaptive is None:
+        _ratoncito_adaptive = create_adaptive_agent(use_multi_agent=True)
+    return _ratoncito_adaptive
+
 @router.post("/chat/react", response_model=ChatResponse)
 async def chat_with_react_agent(request: ChatRequest):
     # Este es el agente del ratoncito usando ReAct.
     try:
         agent = get_react_agent()
         
+        # Extraer contexto del sitio del mensaje si está presente
+        message = request.message
+        site_context = None
+        
+        if message.startswith("[Contexto: ") and "]" in message:
+            end_bracket = message.find("]")
+            site_context = message[11:end_bracket]  # Extraer nombre del sitio
+            message = message[end_bracket + 2:]  # Remover el contexto del mensaje
+            
+            # Establecer el contexto del sitio en el agente
+            if hasattr(agent, 'current_site_context'):
+                agent.current_site_context = site_context
+        
         # Prepararamos contexto
         context = request.context or {}
         if request.location:
             context["location"] = request.location
+        if site_context:
+            context["site_context"] = site_context
             
         # Obtenemos respuesta
-        result = agent.chat(request.message, context)
+        result = agent.chat(message, context)
         is_fallback = result.get("approach", "") == "direct_fallback"
         return {
             "response": result.get("response", "¡Por mis bigotitos! Ha ocurrido algo mágico e inesperado."),
@@ -111,6 +135,142 @@ async def compare_agents(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error comparando agentes: {str(e)}")
+
+
+# ===== NUEVAS RUTAS PARA SISTEMA MULTI-AGENTE =====
+
+@router.post("/chat/multi-agent", response_model=ChatResponse)
+async def chat_with_multi_agent(request: ChatRequest):
+    """Chat usando el sistema multi-agente mejorado"""
+    try:
+        agent = get_adaptive_agent()
+        
+        # Extraer contexto del sitio del mensaje si está presente
+        message = request.message
+        site_context = None
+        
+        if message.startswith("[Contexto: ") and "]" in message:
+            end_bracket = message.find("]")
+            site_context = message[11:end_bracket]  # Extraer nombre del sitio
+            message = message[end_bracket + 2:]  # Remover el contexto del mensaje
+        
+        # Preparar contexto
+        context = request.context or {}
+        if request.location:
+            context["location"] = request.location
+        if site_context:
+            context["site_context"] = site_context
+            
+        # Obtener respuesta del sistema multi-agente
+        result = agent.chat(message, context)
+        
+        return {
+            "response": result.get("response", "¡Por mis bigotitos! Ha ocurrido algo mágico e inesperado."),
+            "success": result.get("success", False),
+            "agent_type": "multi_agent",
+            "extra_info": {
+                "approach": result.get("approach", "unknown"),
+                "agents_used": result.get("agents_used", []),
+                "context_info": result.get("context_info", {}),
+                "system_type": result.get("system_type", "multi_agent")
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en el sistema multi-agente: {str(e)}")
+
+
+class SystemSwitchRequest(BaseModel):
+    use_multi_agent: bool
+    
+@router.post("/system/switch")
+async def switch_agent_system(request: SystemSwitchRequest):
+    """Cambia entre sistema multi-agente y legacy"""
+    try:
+        agent = get_adaptive_agent()
+        result = agent.switch_system(request.use_multi_agent)
+        
+        return {
+            "status": result["status"],
+            "message": result["message"],
+            "current_system": "multi_agent" if request.use_multi_agent else "legacy"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error cambiando sistema: {str(e)}")
+
+
+@router.get("/system/status")
+async def get_system_status():
+    """Obtiene el estado actual del sistema de agentes"""
+    try:
+        agent = get_adaptive_agent()
+        system_info = agent.get_system_info()
+        
+        return {
+            "system_info": system_info,
+            "available_endpoints": {
+                "react": "/chat/react",
+                "simple": "/chat/simple",
+                "multi_agent": "/chat/multi-agent",
+                "compare": "/compare"
+            },
+            "recommendations": {
+                "best_for_complex_queries": "multi_agent",
+                "best_for_simple_queries": "simple",
+                "best_for_debugging": "react"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo estado del sistema: {str(e)}")
+
+
+@router.get("/compare/all", response_model=Dict[str, Any])
+async def compare_all_agents(
+    message: str = Query(..., description="Mensaje para todos los agentes"),
+    location: Optional[str] = Query(None, description="Ubicación (opcional)"),
+):
+    """Compara respuestas de todos los sistemas de agentes disponibles"""
+    try:
+        # Obtener respuesta del agente ReAct
+        react_agent = get_react_agent()
+        react_result = react_agent.chat(message, {"location": location} if location else {})
+        
+        # Obtener respuesta del agente Simple
+        simple_agent = get_simple_agent()
+        simple_result = simple_agent.chat(message, location)
+        
+        # Obtener respuesta del sistema multi-agente
+        multi_agent = get_adaptive_agent()
+        multi_result = multi_agent.chat(message, {"location": location} if location else {})
+        
+        return {
+            "message": message,
+            "location": location,
+            "responses": {
+                "react": {
+                    "text": react_result.get("response", "Error en agente ReAct"),
+                    "success": react_result.get("success", False),
+                    "approach": react_result.get("approach", "unknown")
+                },
+                "simple": {
+                    "text": simple_result.get("response", "Error en agente Simple"),
+                    "success": simple_result.get("success", False),
+                    "intent": simple_result.get("intent", "unknown")
+                },
+                "multi_agent": {
+                    "text": multi_result.get("response", "Error en sistema multi-agente"),
+                    "success": multi_result.get("success", False),
+                    "approach": multi_result.get("approach", "unknown"),
+                    "agents_used": multi_result.get("agents_used", [])
+                }
+            },
+            "performance_analysis": {
+                "most_detailed": "multi_agent",
+                "fastest": "simple",
+                "most_reliable": "multi_agent"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error comparando todos los agentes: {str(e)}")
     
 
 
