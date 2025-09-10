@@ -93,18 +93,23 @@ try:
                 curiosidades.append(clean_text)
 
 
-    # Guarda las curiosidades en un archivo .txt
-    def guardar_en_txt(lista, nombre_archivo):
+
+    # Guarda las curiosidades en un archivo .txt con el mismo formato mostrado en pantalla
+    def guardar_en_txt_formato(titulo, curiosidades, nombre_archivo):
         with open(nombre_archivo, 'w', encoding='utf-8') as f:
-            for i, fact in enumerate(lista, 1):
-                f.write(f"{i}.{fact}\n")
+            f.write("Boton de cookies clickeado exitosamente.\n")
+            if titulo:
+                f.write(f"Título: {titulo}\n\n")
+            f.write("--- Curiosidades Extraídas ---\n")
+            for i, fact in enumerate(curiosidades, 1):
+                f.write(f"{i}.{fact}\n\n")
 
     if curiosidades:
         print("\n--- Curiosidades Extraídas ---")
         for i, fact in enumerate(curiosidades, 1):
             print(f"{i}.{fact}\n")
-        # Guarda automáticamente en curiosidades_madrid.txt
-        guardar_en_txt(curiosidades, "curiosidades_madrid.txt")
+        # Guarda automáticamente en curiosidades_madrid.txt con el formato solicitado
+        guardar_en_txt_formato(titulo, curiosidades, "curiosidades_madrid.txt")
         print("\nCuriosidades guardadas en curiosidades_madrid.txt")
     else:
         print("\nNo se encontraron curiosidades.")
