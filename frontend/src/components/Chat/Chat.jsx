@@ -6,147 +6,135 @@ import {
   Paper, 
   Typography, 
   Container,
-  IconButton
+  CircularProgress 
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import ChatMessage from './ChatMessage';
-import LoadingSpinner from '../UI/LoadingSpinner';
-import ErrorMessage from '../UI/ErrorMessage';
-import { sendChatMessage } from '../../services/chatService';
+import ErrorMessage from '../UI/ErrorMessage'; 
 
-const Chat = () => {
-  const [messages, setMessages] = useState([
-    { 
-      text: "¡Por mis bigotitos! ¡Hola pequeños aventureros! Soy el Ratoncito Pérez, guardián mágico de Madrid. ¿Estáis listos para una aventura?", 
-      isUser: false 
-    }
-  ]);
-  const [inputValue, setInputValue] = useState('');
+import { sendReactChatMessage } from '../../services/chatService';
+
+const Chat = ({ initialContext }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    const userMessage = { text: inputValue, isUser: true };
-    setMessages([...messages, userMessage]);
-    setInputValue('');
-    setError(null);
+  useEffect(() => {
+    if (initialContext && initialContext.message && messages.length === 0) {
+      setMessages([{ sender: 'ratoncito', text: initialContext.message }]);
+    }
+  }, [initialContext, messages.length]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault(); 
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = { sender: 'user', text: input };
+    const newMessages = [...messages, userMessage];
+    
+    setMessages(newMessages);
+    const currentInput = input; 
+    setInput(''); 
     setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await sendChatMessage(inputValue);
-      
-      setMessages(prev => [...prev, { 
-        text: response.response, 
-        isUser: false 
-      }]);
+      const response = await sendReactChatMessage(currentInput, newMessages);
+      setMessages(prev => [...prev, { sender: 'ratoncito', text: response.response }]);
     } catch (err) {
-      setError(err);
+      setError("¡Uy! Mis antenas mágicas no funcionan bien. ¿Podemos intentarlo de nuevo?");
+      setInput(currentInput);
+      setMessages(messages);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRetry = () => {
-    setError(null);
-    const lastUserMessage = [...messages].reverse()
-      .find(message => message.isUser)?.text;
-      
+    const lastUserMessage = messages.filter(m => m.sender === 'user').pop();
     if (lastUserMessage) {
-      setInputValue(lastUserMessage);
+      setInput(lastUserMessage.text);
+      setMessages(prev => prev.filter(m => m.sender === 'user'));
     }
   };
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ height: '85vh', p: 0 }}>
       <Paper 
-        elevation={3} 
+        elevation={12} 
         sx={{ 
-          height: '70vh', 
+          height: '100%', 
           display: 'flex', 
           flexDirection: 'column',
-          overflow: 'hidden',
-          borderRadius: 3,
-          border: '1px solid rgba(63, 81, 181, 0.2)',
-          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.1)'
+          borderRadius: 4,
+          backgroundColor: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
         }}
-        className="magic-card"
       >
-        {/* Header */}
-        <Box 
-          sx={{ 
-            p: 2, 
-            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-            background: 'linear-gradient(90deg, #3f51b5, #7986cb)',
-            color: 'white'
-          }}
-        >
-          <Typography variant="h6" fontWeight="bold">
-            Charla con el Ratoncito Pérez
-          </Typography>
-          <Typography variant="body2">
-            ¡Pregúntame lo que quieras sobre Madrid!
+        {/* Header del Chat */}
+        <Box sx={{ p: 2, borderBottom: '1px solid rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <Typography variant="h6" fontWeight="bold" className="magic-text">
+            Aventura con el Ratoncito Pérez
           </Typography>
         </Box>
         
-        <Box 
-          sx={{ 
-            p: 2, 
-            flexGrow: 1, 
-            overflowY: 'auto',
-            bgcolor: 'background.default'
-          }}
-        >
-          {messages.map((message, index) => (
+        {/* Área de Mensajes */}
+        <Box sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
+          {messages.map((msg, index) => (
             <ChatMessage 
               key={index} 
-              message={message.text} 
-              isUser={message.isUser} 
+              message={msg.text} 
+              isUser={msg.sender === 'user'} 
             />
           ))}
           
-          {isLoading && <LoadingSpinner />}
-          {error && <ErrorMessage error={error} onRetry={handleRetry} />}
+          {isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', m: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          
+          {error && <ErrorMessage message={error} onRetry={handleRetry} />}
           
           <div ref={messagesEndRef} />
         </Box>
         
-        {/* Input area */}
+        {/* Área de Input */}
         <Box 
           component="form" 
           onSubmit={handleSendMessage}
-          sx={{ 
-            p: 2, 
-            borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-            bgcolor: 'background.paper',
-            display: 'flex'
-          }}
+          sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center' }}
         >
           <TextField
             fullWidth
             variant="outlined"
             placeholder="Escribe tu mensaje aquí..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            value={input} 
+            onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
             sx={{ mr: 1 }}
             size="small"
+            autoComplete="off"
           />
           <Button 
             variant="contained" 
             color="primary" 
             type="submit"
-            disabled={isLoading || !inputValue.trim()}
-            endIcon={<SendIcon />}
+            disabled={isLoading || !input.trim()}
+            sx={{ borderRadius: '50%', minWidth: '50px', height: '50px' }}
           >
-            Enviar
+            <SendIcon />
           </Button>
         </Box>
       </Paper>

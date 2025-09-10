@@ -10,9 +10,16 @@ export const sendChatMessage = async (message) => {
   }
 };
 
-export const sendReactChatMessage = async (message) => {
+
+export const sendReactChatMessage = async (message, history = []) => {
   try {
-    const response = await api.post('/ratoncito/chat/react', { message });
+    const response = await api.post('/ratoncito/chat/react', {
+      message: message,
+      chat_history: history.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }))
+    });
     return response.data;
   } catch (error) {
     console.error('Error sending React chat message:', error);
