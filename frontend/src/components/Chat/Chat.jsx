@@ -6,57 +6,29 @@ import {
   Paper, 
   Typography, 
   Container,
-  CircularProgress,
-  Avatar 
+  CircularProgress 
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 
 // Importamos el nuevo servicio unificado
 import { sendMessageToRatoncito } from '../../services/chatService';
-import AudioButton from './AudioButton';
 
 // Componente para mostrar cada mensaje en el chat
 const ChatMessage = ({ message, isUser }) => (
-    <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2, alignItems: 'flex-start' }}>
-        {!isUser && (
-            <Avatar 
-                src="/images/ratoncito.png" 
-                alt="Ratoncito Pérez" 
-                sx={{ width: 40, height: 40, mr: 1, mt: 0.5 }}
-            />
-        )}
-        <Box sx={{ display: 'flex', flexDirection: 'column', maxWidth: '80%' }}>
-            <Paper
-                elevation={3}
-                sx={{
-                    p: '10px 15px',
-                    borderRadius: isUser ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
-                    backgroundColor: isUser ? 'primary.main' : 'secondary.main',
-                    color: 'white',
-                }}
-            >
-                {/* Usamos pre-wrap para respetar los saltos de línea del backend */}
-                <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>{message}</Typography>
-            </Paper>
-            {!isUser && (
-                 <Box sx={{ 
-                     mt: 1, 
-                     ml: 1, 
-                     display: 'flex', 
-                     justifyContent: 'flex-start',
-                     backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                     borderRadius: '8px',
-                     padding: '4px'
-                 }}>
-                     <AudioButton 
-                         text={message} 
-                         size="medium" 
-                         color="primary" 
-                         showProgress={true}
-                     />
-                 </Box>
-             )}
-        </Box>
+    <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2 }}>
+        <Paper
+            elevation={3}
+            sx={{
+                p: '10px 15px',
+                borderRadius: isUser ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
+                backgroundColor: isUser ? 'primary.main' : 'secondary.main',
+                color: 'white',
+                maxWidth: '80%',
+            }}
+        >
+            {/* Usamos pre-wrap para respetar los saltos de línea del backend */}
+            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>{message}</Typography>
+        </Paper>
     </Box>
 );
 
@@ -82,7 +54,7 @@ const Chat = () => {
         try {
             const response = await sendMessageToRatoncito("hola", sid);
             setMessages([{ sender: 'ratoncito', text: response.response }]);
-        } catch {
+        } catch (err) {
             setError("¡Uy! No encuentro al Ratoncito Pérez. ¿Estará buscando dientes?");
         } finally {
             setIsLoading(false);
@@ -114,7 +86,7 @@ const Chat = () => {
       // Usamos la nueva función del servicio, pasando el mensaje y el sessionId
       const response = await sendMessageToRatoncito(currentInput, sessionId);
       setMessages(prev => [...prev, { sender: 'ratoncito', text: response.response }]);
-    } catch {
+    } catch (err) {
       setError("¡Uy! Mis antenas mágicas no funcionan bien. ¿Podemos intentarlo de nuevo?");
       // Devolvemos el input al usuario para que no lo pierda
       setInput(currentInput);

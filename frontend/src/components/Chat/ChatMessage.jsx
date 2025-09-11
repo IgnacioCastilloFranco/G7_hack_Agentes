@@ -2,7 +2,6 @@ import React from 'react';
 import { Box, Paper, Typography, Avatar } from '@mui/material';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import AudioButton from './AudioButton';
 
 const messageVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -64,21 +63,9 @@ const ChatMessage = ({ message, isUser }) => {
           }
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <Box sx={{ flex: 1 }}>
-            <ReactMarkdown>
-              {message}
-            </ReactMarkdown>
-          </Box>
-          {!isUser && (
-            <AudioButton 
-              text={message} 
-              size="small" 
-              color="primary"
-              showProgress={true}
-            />
-          )}
-        </Box>
+        <ReactMarkdown>
+          {message}
+        </ReactMarkdown>
       </Paper>
 
       {isUser && (

@@ -3,12 +3,12 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#3f51b5', // Azul mágico
+      main: '#3f51b5', 
       light: '#757de8',
       dark: '#002984',
     },
     secondary: {
-      main: '#f50057', // Rosa mágico
+      main: '#f50057', 
       light: '#ff5983',
       dark: '#bb002f',
     },

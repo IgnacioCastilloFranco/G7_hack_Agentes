@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -10,103 +10,148 @@ import {
   Skeleton,
   Button,
   CircularProgress,
-  Alert
+  Alert,
+  TextField,
+  Paper,
+  Divider
 } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import SearchIcon from '@mui/icons-material/Search';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { getNearbyPlaces } from '../services/narrativeService';
+import { getNearbyPlaces, searchPlacesByText } from '../services/narrativeService';
 
 const LocationsPage = () => {
   const { latitude, longitude, error: geoError, getCurrentPosition } = useGeolocation();
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
   const [places, setPlaces] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const fetchPlaces = async () => {
-      if (latitude && longitude) {
-        setIsLoading(true);
-        setApiError(null);
-        try {
-          const data = await getNearbyPlaces({ latitude, longitude });
-          setPlaces(data.sites || []);
-        } catch (err) {
-          setApiError('¡Oh, no! No pude encontrar lugares mágicos cerca. Mis bigotes deben estar cruzados.');
-        } finally {
-          setIsLoading(false);
-        }
+  const fetchPlaces = useCallback(async (type, params) => {
+    setIsLoading(true);
+    setApiError(null);
+    setPlaces([]);
+    try {
+      const data = type === 'nearby'
+        ? await getNearbyPlaces(params)
+        : await searchPlacesByText(params);
+        
+      setPlaces(data.sites || []);
+      if (!data.sites || data.sites.length === 0) {
+        setApiError('No he encontrado lugares mágicos con esa búsqueda. ¿Probamos otra?');
       }
-    };
-    fetchPlaces();
-  }, [latitude, longitude]);
+    } catch (err) {
+      setApiError('¡Oh, no! Mis bigotes se han cruzado y no pude buscar lugares.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const handleFindMeClick = () => {
-    setPlaces([]); 
     getCurrentPosition();
+  };
+  
+  React.useEffect(() => {
+    if (latitude && longitude) {
+      fetchPlaces('nearby', { latitude, longitude });
+    }
+  }, [latitude, longitude, fetchPlaces]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      fetchPlaces('search', { query: searchQuery });
+    }
   };
 
   return (
-    <Container>
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h3" className="magic-text" gutterBottom>
-          Lugares Mágicos Cercanos
-        </Typography>
-        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 2 }}>
-          ¡Pulsa el botón para que pueda usar mi magia y encontrar los secretos que te rodean!
-        </Typography>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleFindMeClick}
-          disabled={isLoading}
-          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <MyLocationIcon />}
+    <Container maxWidth="lg">
+      <Paper sx={{ p: {xs: 2, md: 4}, mb: 4, backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderRadius: 4 }}>
+        <Typography 
+          variant="h3" 
+          gutterBottom 
+          textAlign="center"
+          sx={{ 
+            color: 'primary.dark', 
+            textShadow: '1px 1px 3px rgba(0,0,0,0.1)',
+            fontWeight: 900
+          }}
         >
-          {isLoading ? 'Buscando...' : 'Encuéntrame'}
-        </Button>
-      </Box>
+          Explorador de Lugares Mágicos
+        </Typography>
+        <Grid container spacing={2} alignItems="center" justifyContent="center">
+          <Grid xs={12} md={5}>
+            <Typography variant="h6" textAlign="center" gutterBottom sx={{color: 'primary.dark'}}>Encuentra secretos cerca de ti</Typography>
+            <Button
+              fullWidth
+              variant="contained"
+              color="secondary"
+              onClick={handleFindMeClick}
+              disabled={isLoading}
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <MyLocationIcon />}
+              sx={{ py: 1.5 }}
+            >
+              Usar mi ubicación
+            </Button>
+          </Grid>
+          <Grid xs={12} md={2} textAlign="center">
+            <Divider orientation="vertical" sx={{ display: { xs: 'none', md: 'block' }, height: '100%', borderColor: 'primary.dark' }}>O</Divider>
+            <Divider sx={{ display: { xs: 'block', md: 'none' }, my: 2, color: 'primary.dark' }}>O</Divider>
+          </Grid>
+          <Grid xs={12} md={5}>
+            <Typography variant="h6" textAlign="center" gutterBottom sx={{color: 'primary.dark'}}>O busca un lugar específico</Typography>
+            <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex' }}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Ej: Palacio de Cristal, Templo de Debod..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '20px 0 0 20px', backgroundColor: 'white' } }}
+              />
+              <Button type="submit" variant="contained" sx={{ borderRadius: '0 20px 20px 0', px: 3 }} disabled={isLoading}>
+                <SearchIcon />
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
 
-      {geoError && <Alert severity="error" sx={{ mt: 2 }}>{geoError}</Alert>}
-      {apiError && <Alert severity="error" sx={{ mt: 2 }}>{apiError}</Alert>}
-
-      {!latitude && !isLoading && (
-         <Box sx={{textAlign: 'center', mt: 4}}>
-            <img src="/images/ratoncito_map.png" alt="Ratoncito con un mapa" style={{maxWidth: '250px', opacity: 0.7}}/>
-            <Typography variant="h6" color="text.secondary">
-                Estoy esperando tus coordenadas para empezar la búsqueda...
-            </Typography>
-         </Box>
-      )}
-
-      <Grid container spacing={4}>
-        {isLoading && places.length === 0 ? (
+      {geoError && <Alert severity="warning" sx={{ mt: 2, backgroundColor: 'rgba(255,255,255,0.8)' }}>{geoError}. Puedes buscar por texto.</Alert>}
+      {apiError && <Alert severity="info" sx={{ mt: 2, backgroundColor: 'rgba(255,255,255,0.8)' }}>{apiError}</Alert>}
+      
+      <Grid container spacing={4} justifyContent="center">
+        {isLoading ? (
           Array.from(new Array(6)).map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card><Skeleton variant="rectangular" height={200} /><CardContent><Skeleton /><Skeleton width="60%" /></CardContent></Card>
+            <Grid xs={12} sm={6} md={4} key={index}>
+              <Card sx={{ height: '100%' }}><Skeleton variant="rectangular" height={200} /><CardContent><Skeleton /><Skeleton width="60%" /></CardContent></Card>
             </Grid>
           ))
         ) : (
           places.map((place) => (
-            <Grid item xs={12} sm={6} md={4} key={place.place_id}>
-              <Card className="magic-card" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardMedia
-                  component="img"
-                  height="200"
-                  image={place.photo_url || `https://placehold.co/600x400/3f51b5/white?text=${place.name.charAt(0)}`}
-                  alt={place.name}
-                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/600x400/3f51b5/white?text=${place.name.charAt(0)}`; }}
-                />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="h2" sx={{fontWeight: 'bold'}}>
+            <Grid xs={12} sm={6} md={4} key={place.place_id}>
+              <Card className="magic-card" sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(255,255,255,0.9)' }}>
+                {place.photo_url ? (
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={place.photo_url}
+                    alt={place.name}
+                    onError={(e) => { e.target.onerror = null; e.target.src = `/images/ratoncito.jpg`; }}
+                    sx={{ objectFit: 'cover' }}
+                  />
+                ) : (
+                  <Box sx={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'primary.light' }}>
+                    <img src="/images/ratoncito.png" alt="Ratoncito Pérez" style={{ height: '60%', opacity: 0.5 }} />
+                  </Box>
+                )}
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography gutterBottom variant="h5" component="h2" sx={{fontWeight: 'bold', color: 'primary.dark'}}>
                     {place.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
                     {place.address}
                   </Typography>
-                   <Box sx={{mt: 1}}>
-                    <Typography variant="caption" color="secondary">
-                        {Math.round(place.distance)} metros de distancia
-                    </Typography>
-                  </Box>
                 </CardContent>
               </Card>
             </Grid>
