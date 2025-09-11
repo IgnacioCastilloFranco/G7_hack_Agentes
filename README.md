@@ -136,6 +136,7 @@ G7_hack_Agentes/
 │   └── vite.config.js                  # Configuración de Vite
 └── README.md                           # Este archivo
 ```
+wiki: https://deepwiki.com/IgnacioCastilloFranco/G7_hack_Agentes
 
 ## ⚙️ Instalación y Configuración
 
@@ -498,16 +499,13 @@ Este proyecto es parte del **Bootcamp de IA - G7 Hack Agentes**. Para contribuir
 4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
 5. Crear Pull Request
 
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 ---
 
 ## 👥 Equipo de Desarrollo
 
 Este proyecto ha sido posible gracias al trabajo colaborativo de nuestro equipo del **Bigotitos de Madrid**:
 
-1. **Max Eisenhardt**  
+1. **Max Beltran**  
    - [LinkedIn](https://www.linkedin.com/in/max-beltran/)  
    - [GitHub](https://github.com/mr-melenas)
 
@@ -530,6 +528,11 @@ Este proyecto ha sido posible gracias al trabajo colaborativo de nuestro equipo 
 6. **María Dunaeva**  
    - [LinkedIn](https://www.linkedin.com/in/mar%C3%ADa-dunaeva/)  
    - [GitHub](https://github.com/MariaDunaeva1)
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 ---
 
 **¡Por mis bigotitos! 🐭✨ ¡Gracias por usar el Ratoncito Pérez!**
