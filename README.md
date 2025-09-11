@@ -524,7 +524,7 @@ Este proyecto ha sido posible gracias al trabajo colaborativo de nuestro equipo 
    - [GitHub](https://github.com/IgnacioCastilloFranco)
 
 5. **Lady Berrocal**  
-   - [LinkedIn](#)  
+   - [LinkedIn](https://www.linkedin.com/in/ladyberrocal/) 
    - [GitHub](https://github.com/nikaLPFB)
 
 6. **María Dunaeva**  
