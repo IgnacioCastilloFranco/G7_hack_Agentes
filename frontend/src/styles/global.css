@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+body {
+    margin: 0;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #87CEEB;
+}
+
+.magic-background {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(-45deg, #a8c0ff, #3f2b96, #23a6d5, #87CEEB);
+    background-size: 400% 400%;
+    animation: gradient-flow 15s ease infinite;
+}
+
+@keyframes gradient-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+
+.bubbles-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bubble {
+    position: absolute;
+    bottom: -150px;
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: rise 25s infinite;
+
+    background: radial-gradient(circle at 75% 25%, white 1px, rgba(255, 192, 203, 0.8) 5%, rgba(173, 216, 230, 0.6) 40%, rgba(144, 238, 144, 0.4) 80%);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 105, 180, 0.5);
+}
+
+@keyframes rise {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: translateY(-120vh) translateX(100px);
+        opacity: 0;
+    }
+}
+
+
+.magic-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.magic-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+}
+
+.magic-text {
+    background: linear-gradient(45deg, #f8bbd0, #ffffff, #90caf9);
+    background-size: 300% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shine 8s linear infinite;
+    display: inline-block;
+    font-weight: 900 !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes shine {
+    to {
+        background-position: 300% center;
+    }
+}
+
+.magic-button {
+    background: linear-gradient(45deg, #f50057 30%, #ff5983 90%) !important;
+    box-shadow: 0 5px 20px rgba(245, 0, 87, .5) !important;
+    transform: perspective(1px) translateZ(0);
+    transition: all 0.3s;
+}
+
+.magic-button:hover {
+    transform: scale(1.1);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 5px 20px rgba(245, 0, 87, .5);
+    }
+
+    50% {
+        box-shadow: 0 8px 35px rgba(245, 0, 87, .8);
+    }
+
+    100% {
+        box-shadow: 0 5px 20px rgba(245, 0, 87, .5);
+    }
+}
