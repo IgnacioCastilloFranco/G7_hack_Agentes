@@ -9,8 +9,15 @@ load_dotenv()
 app = FastAPI(
     title="Fastapi",
     description="API del Ratoncito Pérez, guardián mágico de Madrid",
-    version="1.0.0"
+    version="1.1.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 La aplicación está arrancando... ¡Despertando al Ratoncito Pérez!")
+    # Al llamar a esta función, forzamos la creación del agente global por primera vez.
+    agent_routes.get_agent_session("startup_session")
+    print("✅ ¡El Ratoncito Pérez está listo para la aventura!")
 
 # CORS
 app.add_middleware(
@@ -22,7 +29,6 @@ app.add_middleware(
 )
 
 # Rutas principales
-app.include_router(recommendations.router, prefix="/recommend", tags=["Recomendaciones"])
 app.include_router(agent_routes.router, prefix="/ratoncito", tags=["Agentes"])
 app.include_router(narrative_routes.router, prefix="/narrative", tags=["Narrativas"])
 app.include_router(storytelling_routes.router, prefix="/activities", tags=["Actividades"])
@@ -31,12 +37,7 @@ app.include_router(storytelling_routes.router, prefix="/activities", tags=["Acti
 def read_root():
     return {
         "message": "¡Por mis bigotitos! Bienvenidos a la API del Ratoncito Pérez",
-        "endpoints": {
-            "react_agent": "/ratoncito/chat/react",
-            "simple_agent": "/ratoncito/chat/simple",
-            "compare_agents": "/ratoncito/compare",
-            "interactive_docs": "/ratoncito/docs"
-        }
+        "status": "¡Listo para recibir peticiones mágicas!"
     }
 
 

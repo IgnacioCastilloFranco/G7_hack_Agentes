@@ -6,147 +6,178 @@ import {
   Paper, 
   Typography, 
   Container,
-  IconButton
+  CircularProgress,
+  Avatar 
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import ChatMessage from './ChatMessage';
-import LoadingSpinner from '../UI/LoadingSpinner';
-import ErrorMessage from '../UI/ErrorMessage';
-import { sendChatMessage } from '../../services/chatService';
+
+// Importamos el nuevo servicio unificado
+import { sendMessageToRatoncito } from '../../services/chatService';
+import AudioButton from './AudioButton';
+
+// Componente para mostrar cada mensaje en el chat
+const ChatMessage = ({ message, isUser }) => (
+    <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2, alignItems: 'flex-start' }}>
+        {!isUser && (
+            <Avatar 
+                src="/images/ratoncito.png" 
+                alt="Ratoncito Pérez" 
+                sx={{ width: 40, height: 40, mr: 1, mt: 0.5 }}
+            />
+        )}
+        <Box sx={{ display: 'flex', flexDirection: 'column', maxWidth: '80%' }}>
+            <Paper
+                elevation={3}
+                sx={{
+                    p: '10px 15px',
+                    borderRadius: isUser ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
+                    backgroundColor: isUser ? 'primary.main' : 'secondary.main',
+                    color: 'white',
+                }}
+            >
+                {/* Usamos pre-wrap para respetar los saltos de línea del backend */}
+                <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>{message}</Typography>
+            </Paper>
+            {!isUser && (
+                 <Box sx={{ 
+                     mt: 1, 
+                     ml: 1, 
+                     display: 'flex', 
+                     justifyContent: 'flex-start',
+                     backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                     borderRadius: '8px',
+                     padding: '4px'
+                 }}>
+                     <AudioButton 
+                         text={message} 
+                         size="medium" 
+                         color="primary" 
+                         showProgress={true}
+                     />
+                 </Box>
+             )}
+        </Box>
+    </Box>
+);
 
 const Chat = () => {
-  const [messages, setMessages] = useState([
-    { 
-      text: "¡Por mis bigotitos! ¡Hola pequeños aventureros! Soy el Ratoncito Pérez, guardián mágico de Madrid. ¿Estáis listos para una aventura?", 
-      isUser: false 
-    }
-  ]);
-  const [inputValue, setInputValue] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Estado para almacenar el ID de sesión único
+  const [sessionId, setSessionId] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Generamos un ID de sesión único cuando el componente se monta
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setSessionId(crypto.randomUUID());
+  }, []);
+  
+  // Efecto para enviar un saludo inicial al backend y empezar la conversación
+  useEffect(() => {
+    const startConversation = async (sid) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await sendMessageToRatoncito("hola", sid);
+            setMessages([{ sender: 'ratoncito', text: response.response }]);
+        } catch {
+            setError("¡Uy! No encuentro al Ratoncito Pérez. ¿Estará buscando dientes?");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (sessionId && messages.length === 0) {
+        startConversation(sessionId);
+    }
+  }, [sessionId]); // Se ejecuta solo cuando sessionId está listo
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+    e.preventDefault(); 
+    if (!input.trim() || isLoading) return;
 
-    const userMessage = { text: inputValue, isUser: true };
-    setMessages([...messages, userMessage]);
-    setInputValue('');
-    setError(null);
+    const userMessage = { sender: 'user', text: input };
+    setMessages(prev => [...prev, userMessage]);
+    
+    const currentInput = input; 
+    setInput(''); 
     setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await sendChatMessage(inputValue);
-      
-      setMessages(prev => [...prev, { 
-        text: response.response, 
-        isUser: false 
-      }]);
-    } catch (err) {
-      setError(err);
+      // Usamos la nueva función del servicio, pasando el mensaje y el sessionId
+      const response = await sendMessageToRatoncito(currentInput, sessionId);
+      setMessages(prev => [...prev, { sender: 'ratoncito', text: response.response }]);
+    } catch {
+      setError("¡Uy! Mis antenas mágicas no funcionan bien. ¿Podemos intentarlo de nuevo?");
+      // Devolvemos el input al usuario para que no lo pierda
+      setInput(currentInput);
+      setMessages(prev => prev.slice(0, -1)); // Eliminamos el mensaje que falló
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRetry = () => {
-    setError(null);
-    const lastUserMessage = [...messages].reverse()
-      .find(message => message.isUser)?.text;
-      
-    if (lastUserMessage) {
-      setInputValue(lastUserMessage);
-    }
-  };
-
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ height: '80vh', p: 0, maxHeight: '700px' }}>
       <Paper 
-        elevation={3} 
+        elevation={12} 
         sx={{ 
-          height: '70vh', 
+          height: '100%', 
           display: 'flex', 
           flexDirection: 'column',
-          overflow: 'hidden',
-          borderRadius: 3,
-          border: '1px solid rgba(63, 81, 181, 0.2)',
-          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.1)'
+          borderRadius: 4,
+          backgroundColor: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
         }}
-        className="magic-card"
       >
-        {/* Header */}
-        <Box 
-          sx={{ 
-            p: 2, 
-            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-            background: 'linear-gradient(90deg, #3f51b5, #7986cb)',
-            color: 'white'
-          }}
-        >
-          <Typography variant="h6" fontWeight="bold">
-            Charla con el Ratoncito Pérez
-          </Typography>
-          <Typography variant="body2">
-            ¡Pregúntame lo que quieras sobre Madrid!
-          </Typography>
-        </Box>
-        
-        <Box 
-          sx={{ 
-            p: 2, 
-            flexGrow: 1, 
-            overflowY: 'auto',
-            bgcolor: 'background.default'
-          }}
-        >
-          {messages.map((message, index) => (
+        <Box sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
+          {messages.map((msg, index) => (
             <ChatMessage 
               key={index} 
-              message={message.text} 
-              isUser={message.isUser} 
+              message={msg.text} 
+              isUser={msg.sender === 'user'} 
             />
           ))}
-          
-          {isLoading && <LoadingSpinner />}
-          {error && <ErrorMessage error={error} onRetry={handleRetry} />}
-          
+          {isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', m: 2 }}>
+              <CircularProgress size={24} color="secondary" />
+            </Box>
+          )}
+          {error && <Typography color="error" sx={{p: 2}}>{error}</Typography>}
           <div ref={messagesEndRef} />
         </Box>
         
-        {/* Input area */}
         <Box 
           component="form" 
           onSubmit={handleSendMessage}
-          sx={{ 
-            p: 2, 
-            borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-            bgcolor: 'background.paper',
-            display: 'flex'
-          }}
+          sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center' }}
         >
           <TextField
             fullWidth
             variant="outlined"
             placeholder="Escribe tu mensaje aquí..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            value={input} 
+            onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            sx={{ mr: 1 }}
-            size="small"
+            autoComplete="off"
+            sx={{ mr: 1, '& .MuiOutlinedInput-root': { borderRadius: '20px' } }}
           />
           <Button 
             variant="contained" 
             color="primary" 
             type="submit"
-            disabled={isLoading || !inputValue.trim()}
-            endIcon={<SendIcon />}
+            disabled={isLoading || !input.trim()}
+            sx={{ borderRadius: '50%', width: '56px', height: '56px' }}
           >
-            Enviar
+            <SendIcon />
           </Button>
         </Box>
       </Paper>
