@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.utils.ratoncito_prompts import RatoncitoPrompts
 from app.services.knowledge import get_retriever
 from app.services.storytelling import generate_magical_story
+from app.services.tourism import search_madrid_data, format_results_for_agent
 
 class ConversationContext:
     """Esta clase es un simple contenedor de datos para una sesión."""
@@ -87,6 +88,11 @@ class RatoncitoAgent:
                 description="LA HERRAMIENTA PRINCIPAL. Úsala para responder CUALQUIER pregunta sobre lugares de Madrid, historia, cultura, o para dar recomendaciones. Es tu fuente de sabiduría."
             ),
             Tool(
+                name="consultar_apis_oficiales_madrid",
+                func=self.query_madrid_open_data,
+                description="Consulta las APIs oficiales de datos abiertos de Madrid para encontrar lugares, eventos, parques, museos, etc. Úsala cuando necesites datos actualizados."
+            ),
+            Tool(
                 name="crear_acertijo_magico",
                 func=self.create_riddle,
                 description="Perfecta para cuando un niño quiera un juego, un acertijo o una adivinanza sobre un lugar de Madrid."
@@ -124,6 +130,15 @@ class RatoncitoAgent:
         places = ["el Palacio Real", "el Parque del Retiro", "la Plaza Mayor", "la Puerta del Sol"]
         return f"¡Por supuesto! Madrid está lleno de magia. Podríamos empezar por explorar lugares como {', '.join(places)}. ¿Te gustaría que te contara algún secreto sobre alguno de ellos?"
 
+    def query_madrid_open_data(self, query: str) -> str:
+        print(f"[*] Consultando APIs oficiales de Madrid para: '{query}'")
+        try:
+            items = search_madrid_data(query)
+            return format_results_for_agent(items)
+        except Exception as e:
+            print(f"❌ Error consultando APIs de Madrid: {e}")
+            return "No he podido consultar las APIs oficiales de Madrid ahora mismo."
+            
     def chat(self, message: str, context: ConversationContext) -> Dict[str, Any]:
         """
         Gestiona la conversación.

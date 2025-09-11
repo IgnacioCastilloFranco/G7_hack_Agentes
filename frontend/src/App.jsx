@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import AdventurePage from './pages/AdventurePage';
 import LocationsPage from './pages/LocationsPage';
 import AppLayout from './components/AppLayout';
+import TTSShowcase from './components/Chat/TTSShowcase';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         }}>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/tts-demo" element={<TTSShowcase />} />
             {/* Rutas que usan el layout con navegación */}
             <Route element={<AppLayout />}>
               <Route path="/aventura" element={<AdventurePage />} />
