@@ -67,7 +67,6 @@ const LocationsPage = () => {
   return (
     <Container maxWidth="lg">
       <Paper sx={{ p: {xs: 2, md: 4}, mb: 4, backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderRadius: 4 }}>
-        {/* <-- CAMBIO CLAVE 1: Título centrado y con mejor contraste --> */}
         <Typography 
           variant="h3" 
           gutterBottom 
@@ -80,7 +79,6 @@ const LocationsPage = () => {
         >
           Explorador de Lugares Mágicos
         </Typography>
-        {/* <-- CAMBIO CLAVE 2: Eliminamos la prop 'item' de todos los Grid hijos --> */}
         <Grid container spacing={2} alignItems="center" justifyContent="center">
           <Grid xs={12} md={5}>
             <Typography variant="h6" textAlign="center" gutterBottom sx={{color: 'primary.dark'}}>Encuentra secretos cerca de ti</Typography>
@@ -143,7 +141,6 @@ const LocationsPage = () => {
                     sx={{ objectFit: 'cover' }}
                   />
                 ) : (
-                  // <-- CAMBIO CLAVE 3: Un 'placeholder' cuando no hay foto -->
                   <Box sx={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'primary.light' }}>
                     <img src="/images/ratoncito.png" alt="Ratoncito Pérez" style={{ height: '60%', opacity: 0.5 }} />
                   </Box>
