@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict, Any
-from langchain.agents import AgentExecutor, create_react_agent
+from langchain.agents import AgentExecutor, initialize_agent, AgentType
 from langchain_groq import ChatGroq
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.utils.ratoncito_prompts import RatoncitoPrompts
 from app.services.knowledge import get_retriever
 from app.services.storytelling import generate_magical_story
+from app.services.tourism import search_madrid_data, format_results_for_agent
 
 class ConversationContext:
     """Esta clase es un simple contenedor de datos para una sesión."""
@@ -41,8 +42,9 @@ class RatoncitoAgent:
         self.llm = self._create_llm()
         self.memory = self._create_memory()
         self.tools = self._create_tools()
-        self.agent_prompt = RatoncitoPrompts.get_ultra_reliable_react_prompt()
-        self.agent = create_react_agent(llm=self.llm, tools=self.tools, prompt=self.agent_prompt)
+        # Construcción estable por versión: initialize_agent con Structured Chat
+        # Esto devuelve directamente un ejecutor de agente listo para usar
+        self.agent = None
         self.agent_executor = self._create_agent_executor()
         print(f"🐭 Ratoncito Pérez (v2) inicializado con personalidad: {self.personality} y modelo: {settings.LLM_MODEL}")
 
@@ -58,14 +60,16 @@ class RatoncitoAgent:
         return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
     def _create_agent_executor(self) -> AgentExecutor:
-        return AgentExecutor(
-            agent=self.agent,
+        # Usamos initialize_agent con el tipo Structured Chat para robustez
+        return initialize_agent(
             tools=self.tools,
+            llm=self.llm,
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
             memory=self.memory,
             verbose=settings.AGENT_VERBOSE,
-            max_iterations=settings.AGENT_MAX_ITERATIONS,
             handle_parsing_errors="¡Por mis bigotitos! Me he liado un poco, ¿podrías repetirlo de otra manera mágica?",
-            return_intermediate_steps=False
+            max_iterations=settings.AGENT_MAX_ITERATIONS,
+            return_intermediate_steps=False,
         )
 
     def _create_tools(self) -> List[Tool]:
@@ -75,6 +79,11 @@ class RatoncitoAgent:
                 name="buscar_informacion_en_documentos_magicos",
                 func=self.search_knowledge_base,
                 description="LA HERRAMIENTA PRINCIPAL. Úsala para responder CUALQUIER pregunta sobre lugares de Madrid, historia, cultura, o para dar recomendaciones. Es tu fuente de sabiduría."
+            ),
+            Tool(
+                name="consultar_apis_oficiales_madrid",
+                func=self.query_madrid_open_data,
+                description="Consulta las APIs oficiales de datos abiertos de Madrid para encontrar lugares, eventos, parques, museos, etc. Úsala cuando necesites datos actualizados."
             ),
             Tool(
                 name="crear_acertijo_magico",
@@ -113,6 +122,15 @@ class RatoncitoAgent:
         print(f"[*] Usando herramienta para recomendar lugares emblemáticos.")
         places = ["el Palacio Real", "el Parque del Retiro", "la Plaza Mayor", "la Puerta del Sol"]
         return f"¡Por supuesto! Madrid está lleno de magia. Podríamos empezar por explorar lugares como {', '.join(places)}. ¿Te gustaría que te contara algún secreto sobre alguno de ellos?"
+
+    def query_madrid_open_data(self, query: str) -> str:
+        print(f"[*] Consultando APIs oficiales de Madrid para: '{query}'")
+        try:
+            items = search_madrid_data(query)
+            return format_results_for_agent(items)
+        except Exception as e:
+            print(f"❌ Error consultando APIs de Madrid: {e}")
+            return "No he podido consultar las APIs oficiales de Madrid ahora mismo."
 
     def chat(self, message: str, context: ConversationContext) -> Dict[str, Any]:
         """
@@ -159,7 +177,8 @@ class RatoncitoAgent:
 
             # Flujo 3: El resto de la conversación la maneja el Agente
             print("[*] Mensaje complejo detectado. Invocando al agente ReAct.")
-            full_input = (f"Mensaje del Usuario: '{message}'\n\n[Contexto de la conversación]\n- Perfil del usuario: {context.user_profile}")
+            persona = RatoncitoPrompts.get_persona_prelude()
+            full_input = (f"{persona}\nMensaje del Usuario: '{message}'\n\n[Contexto de la conversación]\n- Perfil del usuario: {context.user_profile}")
             
             result = self.agent_executor.invoke({"input": full_input})
             response_text = result.get("output", "¡Por mis bigotitos! Me he quedado sin palabras.").strip()

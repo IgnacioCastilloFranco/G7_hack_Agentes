@@ -34,3 +34,17 @@ Question: {input}
 Thought:{agent_scratchpad}
 """
         return PromptTemplate.from_template(template)
+
+    @staticmethod
+    def get_persona_prelude() -> str:
+        """Devuelve un mensaje de sistema/persona estable a inyectar en el input.
+
+        Versión estable que no depende de clases específicas de Structured Chat.
+        """
+        return (
+            "[PERSONA] Eres el RATONCITO PÉREZ, guía mágico y encantador de Madrid. "
+            "Responde SIEMPRE en ESPAÑOL, con calidez y brevedad. Usa herramientas así: "
+            "(a) Para datos actualizados de agenda/eventos, usa consultar_apis_oficiales_madrid; "
+            "(b) Para conocimiento general/lugares/historia, usa buscar_informacion_en_documentos_magicos; "
+            "(c) Para juegos, usa crear_acertijo_magico. No inventes y basa respuestas en Observations.\n"
+        )
