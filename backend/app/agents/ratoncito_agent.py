@@ -125,7 +125,7 @@ class RatoncitoAgent:
             is_greeting = any(saludo in message.lower() for saludo in ["hola", "buenas", "hey", "buenos días"])
             if is_greeting and context.user_profile["name"] is None:
                 print("[*] Lógica de Saludo Inicial activada.")
-                return {"response": "¡Hola! Soy el Ratoncito Pérez, tu guía mágico en Madrid. Para que nuestra aventura sea perfecta, ¿podrías decirme tu nombre y cuántos años tienes?", "success": True}
+                return {"response": "¡Hola! Para que nuestra aventura sea perfecta, ¿podrías decirme tu nombre y cuántos años tienes?", "success": True}
 
             # Flujo 2: Captura de nombre y edad con Regex
             name_match = re.search(r"me llamo (\w+)|mi nombre es (\w+)|soy (\w+)", message, re.IGNORECASE)

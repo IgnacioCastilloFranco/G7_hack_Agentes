@@ -1,152 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Button, Typography, Grow, Container, Paper, Divider } from '@mui/material';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Box, 
+  TextField, 
+  Button, 
+  Paper, 
+  Typography, 
+  Container,
+  CircularProgress,
+  Avatar 
+} from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import { sendMessageToRatoncito } from '../services/chatService';
 
-import LocationComponent from '../components/Location/LocationComponent';
-import SearchComponent from '../components/Location/SearchComponent';
-import PlacesList from '../components/Stories/PlacesList'; 
-import Chat from '../components/Chat/Chat'; 
-
-import { getNearbyPlaces, searchPlacesByText } from '../services/narrativeService';
+const ChatMessage = ({ message, isUser }) => (
+    <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2, gap: 1 }}>
+        {!isUser && <Avatar src="/images/ratoncito.png" sx={{ width: 40, height: 40 }} />}
+        <Paper
+            elevation={3}
+            sx={{
+                p: '10px 15px',
+                borderRadius: isUser ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
+                backgroundColor: isUser ? 'primary.main' : 'secondary.light',
+                color: 'white',
+                maxWidth: '80%',
+            }}
+        >
+            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>{message}</Typography>
+        </Paper>
+    </Box>
+);
 
 const AdventurePage = () => {
-  const [stage, setStage] = useState('welcome'); 
-  
-  const [places, setPlaces] = useState([]);
-  const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
-  const [placesError, setPlacesError] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState(''); 
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  const messagesEndRef = useRef(null);
 
-  const [chatContext, setChatContext] = useState(null); 
+  useEffect(() => {
+    setSessionId(crypto.randomUUID());
 
-  const handleStartAdventure = () => {
-    setStage('location_selection');
-  };
+    setMessages([
+      { sender: 'ratoncito', text: '¡Hola, valiente aventurero! ✨ Soy el Ratoncito Pérez. Estoy listo para desvelar los secretos de Madrid contigo.' }
+    ]);
+    
+  }, []); 
 
-  const handleLocationDetected = async (lat, lng) => {
-    console.log('🎯 AdventurePage: Ubicación detectada', lat, lng);
-  setStage('places_display'); 
-  setIsLoadingPlaces(true);
-  setPlacesError(null);
-  try {
-    console.log('🔍 Llamando a getNearbyPlaces con:', { latitude: lat, longitude: lng });
-    const result = await getNearbyPlaces({ latitude: lat, longitude: lng });
-    console.log('✅ Resultado de getNearbyPlaces:', result);
-    setPlaces(result.sites || []);
-    if (!result.sites || result.sites.length === 0) {
-      console.warn('⚠️ No se encontraron sites en el resultado');
-    }
-  } catch (error) {
-    console.error('❌ Error en handleLocationDetected:', error);
-    setPlacesError('No pude encontrar lugares mágicos cerca de ti. ¡Inténtalo de nuevo!');
-  } finally {
-    setIsLoadingPlaces(false);
-  }
-};
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const handleSearch = async (query) => {
-  console.log('🎯 AdventurePage: Búsqueda iniciada con query:', query);
-  setStage('places_display'); 
-  setIsLoadingPlaces(true);
-  setPlacesError(null);
-  try {
-    console.log('🔍 Llamando a searchPlacesByText con:', { query });
-    const result = await searchPlacesByText({ query });
-    console.log('✅ Resultado de searchPlacesByText:', result);
-    setPlaces(result.sites || []);
-    if (!result.sites || result.sites.length === 0) {
-      console.warn('⚠️ No se encontraron sites en la búsqueda');
-    }
-  } catch (error) {
-    console.error('❌ Error en handleSearch:', error);
-    setPlacesError(`No encontré nada para "${query}". ¿Probamos con otro nombre?`);
-  } finally {
-    setIsLoadingPlaces(false);
-  }
-};
+  const handleSendMessage = async (e) => {
+    e.preventDefault(); 
+    if (!input.trim() || isLoading || !sessionId) return;
 
-  const handlePlaceSelected = (place) => {
-    setChatContext({
-      type: 'place_chat_start',
-      data: place,
-      message: `¡Por mis bigotitos! Has elegido ${place.name}. Es un lugar fascinante. ¿Qué te gustaría saber sobre él?`
-    });
-    setStage('chatting'); 
-  };
+    const userMessage = { sender: 'user', text: input };
+    setMessages(prev => [...prev, userMessage]);
+    
+    const currentInput = input; 
+    setInput(''); 
+    setIsLoading(true);
+    setError(null);
 
-  const renderStage = () => {
-    switch (stage) {
-      case 'welcome':
-        return (
-          <Grow in={true}>
-            <Box textAlign="center" color="white">
-              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.7 }}>
-                <Typography variant="h2" component="h1" gutterBottom className="magic-text">
-                  La Aventura del Ratoncito Pérez
-                </Typography>
-                <Typography variant="h5" sx={{ mb: 4 }}>
-                  🐭✨ ¡Descubre los secretos mágicos de Madrid conmigo!
-                </Typography>
-                <Button variant="contained" color="secondary" size="large" onClick={handleStartAdventure}>
-                  Comenzar la Aventura
-                </Button>
-              </motion.div>
-            </Box>
-          </Grow>
-        );
-      
-      case 'location_selection':
-        return (
-          <Grow in={true}>
-            <Container maxWidth="md">
-              <Paper elevation={3} sx={{ p: 4, borderRadius: 4, textAlign: 'center', backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(5px)' }}>
-                <Typography variant="h4" gutterBottom className="magic-text">¿Dónde empezamos?</Typography>
-                <Box sx={{ my: 3 }}>
-                  <LocationComponent onLocationChange={handleLocationDetected} />
-                </Box>
-                <Divider>O</Divider>
-                <Box sx={{ mt: 3 }}>
-                  <SearchComponent onSearch={handleSearch} />
-                </Box>
-              </Paper>
-            </Container>
-          </Grow>
-        );
-
-      case 'places_display':
-        return (
-          <Container maxWidth="lg">
-            <PlacesList 
-              places={places}
-              isLoading={isLoadingPlaces}
-              error={placesError}
-              onSelectPlace={handlePlaceSelected} 
-            />
-          </Container>
-        );
-
-      case 'chatting':
-        return (
-            <Chat initialContext={chatContext} />
-        );
-
-      default:
-        return null;
+    try {
+      const response = await sendMessageToRatoncito(currentInput, sessionId);
+      setMessages(prev => [...prev, { sender: 'ratoncito', text: response.response }]);
+    } catch (err) {
+      setError("¡Uy! Mis antenas mágicas no funcionan bien. ¿Podemos intentarlo de nuevo?");
+      setInput(currentInput); 
+      setMessages(prev => prev.filter(m => m !== userMessage));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        flexGrow: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 3,
-        minHeight: '100vh'
-      }}
-    >
-      {renderStage()}
-    </Box>
+    <Container maxWidth="md" sx={{ height: 'calc(100vh - 120px)', p: 0 }}>
+      <Paper 
+        elevation={12} 
+        sx={{ 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          borderRadius: 4,
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(5px)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+        }}
+      >
+        <Box sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
+          {messages.map((msg, index) => (
+            <ChatMessage key={index} message={msg.text} isUser={msg.sender === 'user'} />
+          ))}
+          {isLoading && <ChatMessage message="..." isUser={false} />}
+          {error && <Typography color="error" sx={{p: 2, textAlign: 'center'}}>{error}</Typography>}
+          <div ref={messagesEndRef} />
+        </Box>
+        
+        <Box component="form" onSubmit={handleSendMessage} sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center' }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Escribe tu nombre y edad..."
+            value={input} 
+            onChange={(e) => setInput(e.target.value)}
+            disabled={isLoading}
+            autoComplete="off"
+            sx={{ mr: 1, '& .MuiOutlinedInput-root': { borderRadius: '20px', backgroundColor: 'white' } }}
+          />
+          <Button variant="contained" color="primary" type="submit" disabled={isLoading || !input.trim()} sx={{ borderRadius: '50%', width: '56px', height: '56px', minWidth: '56px' }}>
+            <SendIcon />
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

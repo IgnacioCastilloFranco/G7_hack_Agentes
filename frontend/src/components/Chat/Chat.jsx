@@ -9,67 +9,95 @@ import {
   CircularProgress 
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import ChatMessage from './ChatMessage';
-import ErrorMessage from '../UI/ErrorMessage'; 
 
-import { sendReactChatMessage } from '../../services/chatService';
+// Importamos el nuevo servicio unificado
+import { sendMessageToRatoncito } from '../../services/chatService';
 
-const Chat = ({ initialContext }) => {
+// Componente para mostrar cada mensaje en el chat
+const ChatMessage = ({ message, isUser }) => (
+    <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2 }}>
+        <Paper
+            elevation={3}
+            sx={{
+                p: '10px 15px',
+                borderRadius: isUser ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
+                backgroundColor: isUser ? 'primary.main' : 'secondary.main',
+                color: 'white',
+                maxWidth: '80%',
+            }}
+        >
+            {/* Usamos pre-wrap para respetar los saltos de línea del backend */}
+            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>{message}</Typography>
+        </Paper>
+    </Box>
+);
+
+const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Estado para almacenar el ID de sesión único
+  const [sessionId, setSessionId] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Generamos un ID de sesión único cuando el componente se monta
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setSessionId(crypto.randomUUID());
+  }, []);
+  
+  // Efecto para enviar un saludo inicial al backend y empezar la conversación
+  useEffect(() => {
+    const startConversation = async (sid) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await sendMessageToRatoncito("hola", sid);
+            setMessages([{ sender: 'ratoncito', text: response.response }]);
+        } catch (err) {
+            setError("¡Uy! No encuentro al Ratoncito Pérez. ¿Estará buscando dientes?");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    if (initialContext && initialContext.message && messages.length === 0) {
-      setMessages([{ sender: 'ratoncito', text: initialContext.message }]);
+    if (sessionId && messages.length === 0) {
+        startConversation(sessionId);
     }
-  }, [initialContext, messages.length]);
+  }, [sessionId]); // Se ejecuta solo cuando sessionId está listo
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault(); 
     if (!input.trim() || isLoading) return;
 
     const userMessage = { sender: 'user', text: input };
-    const newMessages = [...messages, userMessage];
+    setMessages(prev => [...prev, userMessage]);
     
-    setMessages(newMessages);
     const currentInput = input; 
     setInput(''); 
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await sendReactChatMessage(currentInput, newMessages);
+      // Usamos la nueva función del servicio, pasando el mensaje y el sessionId
+      const response = await sendMessageToRatoncito(currentInput, sessionId);
       setMessages(prev => [...prev, { sender: 'ratoncito', text: response.response }]);
     } catch (err) {
       setError("¡Uy! Mis antenas mágicas no funcionan bien. ¿Podemos intentarlo de nuevo?");
+      // Devolvemos el input al usuario para que no lo pierda
       setInput(currentInput);
-      setMessages(messages);
+      setMessages(prev => prev.slice(0, -1)); // Eliminamos el mensaje que falló
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRetry = () => {
-    const lastUserMessage = messages.filter(m => m.sender === 'user').pop();
-    if (lastUserMessage) {
-      setInput(lastUserMessage.text);
-      setMessages(prev => prev.filter(m => m.sender === 'user'));
-    }
-  };
-
   return (
-    <Container maxWidth="md" sx={{ height: '85vh', p: 0 }}>
+    <Container maxWidth="md" sx={{ height: '80vh', p: 0, maxHeight: '700px' }}>
       <Paper 
         elevation={12} 
         sx={{ 
@@ -82,14 +110,6 @@ const Chat = ({ initialContext }) => {
           boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
         }}
       >
-        {/* Header del Chat */}
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(0,0,0,0.1)', textAlign: 'center' }}>
-          <Typography variant="h6" fontWeight="bold" className="magic-text">
-            Aventura con el Ratoncito Pérez
-          </Typography>
-        </Box>
-        
-        {/* Área de Mensajes */}
         <Box sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
           {messages.map((msg, index) => (
             <ChatMessage 
@@ -98,19 +118,15 @@ const Chat = ({ initialContext }) => {
               isUser={msg.sender === 'user'} 
             />
           ))}
-          
           {isLoading && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-start', m: 2 }}>
-              <CircularProgress size={24} />
+              <CircularProgress size={24} color="secondary" />
             </Box>
           )}
-          
-          {error && <ErrorMessage message={error} onRetry={handleRetry} />}
-          
+          {error && <Typography color="error" sx={{p: 2}}>{error}</Typography>}
           <div ref={messagesEndRef} />
         </Box>
         
-        {/* Área de Input */}
         <Box 
           component="form" 
           onSubmit={handleSendMessage}
@@ -123,16 +139,15 @@ const Chat = ({ initialContext }) => {
             value={input} 
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            sx={{ mr: 1 }}
-            size="small"
             autoComplete="off"
+            sx={{ mr: 1, '& .MuiOutlinedInput-root': { borderRadius: '20px' } }}
           />
           <Button 
             variant="contained" 
             color="primary" 
             type="submit"
             disabled={isLoading || !input.trim()}
-            sx={{ borderRadius: '50%', minWidth: '50px', height: '50px' }}
+            sx={{ borderRadius: '50%', width: '56px', height: '56px' }}
           >
             <SendIcon />
           </Button>
