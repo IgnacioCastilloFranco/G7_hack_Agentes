@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   TextField,
-  Button,
   Paper,
   Typography,
   Container,
@@ -12,9 +11,11 @@ import {
   CircularProgress
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp'; // <-- CAMBIO CLAVE: Importamos el icono de altavoz
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import MicIcon from '@mui/icons-material/Mic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sendMessageToRatoncito, speakText } from '../services/chatService';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 const ChatMessage = ({ message, isUser, onSpeak, audioState }) => {
   const messageVariants = {
@@ -69,6 +70,14 @@ const AdventurePage = () => {
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
   const [audioState, setAudioState] = useState({ loadingId: null, playingId: null });
+
+  const { text: transcribedText, isListening, startListening, isSupported } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcribedText) {
+      setInput(transcribedText);
+    }
+  }, [transcribedText]);
 
   const createMessage = (sender, text) => ({ id: crypto.randomUUID(), sender, text });
 
@@ -165,6 +174,20 @@ const AdventurePage = () => {
             autoComplete="off"
             sx={{ mr: 1, '& .MuiOutlinedInput-root': { borderRadius: '20px', backgroundColor: 'white' } }}
           />
+          {isSupported && (
+            <Tooltip title="Hablar">
+              <span>
+                <IconButton 
+                  onClick={startListening} 
+                  disabled={isListening || isLoading}
+                  sx={{ color: isListening ? 'secondary.main' : 'primary.main' }}
+                >
+                  <MicIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
           <Tooltip title="Enviar Mensaje">
             <span>
               <IconButton color="primary" type="submit" disabled={isLoading || !input.trim()} sx={{ backgroundColor: 'primary.main', color: 'white', '&:hover': { backgroundColor: 'primary.dark' } }}>
@@ -179,4 +202,3 @@ const AdventurePage = () => {
 };
 
 export default AdventurePage;
-
