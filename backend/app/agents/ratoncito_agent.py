@@ -1,4 +1,5 @@
 import re
+import random
 from typing import List, Dict, Any
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_groq import ChatGroq
@@ -121,13 +122,23 @@ class RatoncitoAgent:
         2. Deriva las preguntas complejas al agente ReAct.
         """
         try:
-            # Flujo 1: Saludo inicial si no conocemos al usuario
+            # Creamos una atajo para la despedida
+            despedidas = ["adiós", "adios", "hasta luego", "chao", "me voy"]
+            if any(despedida in message.lower() for despedida in despedidas):
+                print("[*] Lógica de Despedida activada.")
+                user_name = context.user_profile.get("name", "aventurero")
+                respuestas = [
+                    f"¡Ha sido un placer explorar Madrid contigo, {user_name}! Que tus bolsillos se llenen de dientes y tus sueños de magia. ¡Hasta la próxima!",
+                    f"¡Adiós, {user_name}! Si se te cae un diente, ya sabes dónde encontrarme. ¡Sigue buscando la magia en cada rincón!",
+                ]
+                return {"response": random.choice(respuestas), "success": True}
+            # Saludo inicial si no conocemos al usuario
             is_greeting = any(saludo in message.lower() for saludo in ["hola", "buenas", "hey", "buenos días"])
             if is_greeting and context.user_profile["name"] is None:
                 print("[*] Lógica de Saludo Inicial activada.")
                 return {"response": "¡Hola! Para que nuestra aventura sea perfecta, ¿podrías decirme tu nombre y cuántos años tienes?", "success": True}
 
-            # Flujo 2: Captura de nombre y edad con Regex
+            # Captura de nombre y edad con Regex
             name_match = re.search(r"me llamo (\w+)|mi nombre es (\w+)|soy (\w+)", message, re.IGNORECASE)
             age_match = re.search(r"tengo (\d+)", message, re.IGNORECASE)
             
@@ -157,7 +168,7 @@ class RatoncitoAgent:
                     # Si falta un dato, lo pedimos amablemente
                     return {"response": "¡Genial! ¿Y podrías decirme también el dato que falta (nombre o edad)?", "success": True}
 
-            # Flujo 3: El resto de la conversación la maneja el Agente
+            # El resto de la conversación la maneja el Agente
             print("[*] Mensaje complejo detectado. Invocando al agente ReAct.")
             full_input = (f"Mensaje del Usuario: '{message}'\n\n[Contexto de la conversación]\n- Perfil del usuario: {context.user_profile}")
             
