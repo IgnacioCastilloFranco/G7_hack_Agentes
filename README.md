@@ -22,6 +22,7 @@
 - [🎮 Uso de la Aplicación](#-uso-de-la-aplicación)
 - [🔧 Configuración Avanzada](#-configuración-avanzada)
 - [📊 Gestión del Proyecto](#-gestión-del-proyecto)
+- [👥 Equipo de Desarrollo](#-equipo-de-desarrollo) 
 
 ## 🎯 Descripción del Proyecto
 
@@ -500,7 +501,35 @@ Este proyecto es parte del **Bootcamp de IA - G7 Hack Agentes**. Para contribuir
 ## 📄 Licencia
 
 Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
+---
 
+## 👥 Equipo de Desarrollo
+
+Este proyecto ha sido posible gracias al trabajo colaborativo de nuestro equipo del **Bigotitos de Madrid**:
+
+1. **Max Eisenhardt**  
+   - [LinkedIn](https://www.linkedin.com/in/max-beltran/)  
+   - [GitHub](https://github.com/mr-melenas)
+
+2. **Alejandro Rajado**  
+   - [LinkedIn](https://www.linkedin.com/in/alejandro-rajado-martín/)  
+   - [GitHub](https://github.com/Alex-rajas)
+
+3. **Nhoeli Salazar**  
+   - [LinkedIn](https://www.linkedin.com/in/nhoeli-salazar/)  
+   - [GitHub](https://github.com/Nho89)
+
+4. **Ignacio Castillo**  
+   - [LinkedIn](https://www.linkedin.com/in/ignacio-castillo-franco/)  
+   - [GitHub](https://github.com/IgnacioCastilloFranco)
+
+5. **Lady Berrocal**  
+   - [LinkedIn](#)  
+   - [GitHub](https://github.com/nikaLPFB)
+
+6. **María Dunaeva**  
+   - [LinkedIn](https://www.linkedin.com/in/mar%C3%ADa-dunaeva/)  
+   - [GitHub](https://github.com/MariaDunaeva1)
 ---
 
 **¡Por mis bigotitos! 🐭✨ ¡Gracias por usar el Ratoncito Pérez!**
