@@ -72,6 +72,49 @@ class RatoncitoAgent:
             return_intermediate_steps=False,
         )
 
+    @staticmethod
+    def _extract_final_answer(text: str) -> str:
+        """Extrae una respuesta limpia desde salidas con formato de agente.
+
+        Estrategia:
+        1) Si hay un bloque JSON con {"action": "Final Answer", "action_input": "..."}, devuelve ese "action_input".
+        2) Si aparece "Final Answer:", devuelve lo que va después.
+        3) Si no, elimina líneas de control (Action/Observation/Thought/Question y claves JSON) y devuelve el resto.
+        """
+        if not text:
+            return text
+
+        import re as _re
+
+        # 1) Buscar patrón JSON de Final Answer
+        m = _re.search(r'"action"\s*:\s*"Final Answer"[\s\S]*?"action_input"\s*:\s*"([\s\S]*?)"', text)
+        if m:
+            extracted = m.group(1)
+            return extracted.strip()
+
+        # 2) Buscar marcador textual "Final Answer:"
+        if "Final Answer:" in text:
+            after = text.split("Final Answer:", 1)[1]
+            return after.strip().strip('"`')
+
+        # 3) Filtro de líneas de control
+        filtered_lines = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            low = stripped.lower()
+            if low.startswith(("action:", "action input:", "observation:", "thought:", "question:")):
+                continue
+            # Líneas que parecen claves JSON: "key": value
+            if _re.match(r'^"[^"]+"\s*:\s*', stripped):
+                continue
+            if stripped in ("{", "}", "[", "]"):
+                continue
+            filtered_lines.append(stripped)
+        cleaned = "\n".join(filtered_lines).strip()
+        return cleaned or text
+
     def _create_tools(self) -> List[Tool]:
         """Crea la lista de herramientas simplificada que el agente puede usar."""
         return [
@@ -181,7 +224,8 @@ class RatoncitoAgent:
             full_input = (f"{persona}\nMensaje del Usuario: '{message}'\n\n[Contexto de la conversación]\n- Perfil del usuario: {context.user_profile}")
             
             result = self.agent_executor.invoke({"input": full_input})
-            response_text = result.get("output", "¡Por mis bigotitos! Me he quedado sin palabras.").strip()
+            raw_output = result.get("output", "¡Por mis bigotitos! Me he quedado sin palabras.")
+            response_text = self._extract_final_answer(str(raw_output)).strip()
             context.last_bot_message = response_text
             return {"response": response_text, "success": True}
 
