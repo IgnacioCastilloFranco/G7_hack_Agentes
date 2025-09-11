@@ -1,21 +1,14 @@
 import re
 from typing import List, Dict, Any
-
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_groq import ChatGroq
 from langchain.tools import Tool
 from langchain.memory import ConversationBufferMemory
-
-# --- CAMBIO: Importaciones simplificadas ---
 from app.core.config import settings
 from app.utils.ratoncito_prompts import RatoncitoPrompts
-# EXPLICACIÓN: Importamos el retriever del nuevo servicio de conocimiento (RAG).
 from app.services.knowledge import get_retriever
 from app.services.storytelling import generate_magical_story
 
-# --------------------------------------------------------------------------
-# CLASE 1: CONTEXTO DE LA CONVERSACIÓN (SIMPLE, SOLO GUARDA DATOS)
-# --------------------------------------------------------------------------
 class ConversationContext:
     """Esta clase es un simple contenedor de datos para una sesión."""
     def __init__(self):
@@ -43,9 +36,6 @@ class RatoncitoAgent:
 
         self.personality = personality or settings.RATONCITO_PERSONALITY
         
-        # --- CAMBIO: Inicializamos el retriever de RAG ---
-        # EXPLICACIÓN: Ya no necesitamos Google Places ni Web Search aquí.
-        # El retriever se inicializa una vez y se reutiliza.
         self.retriever = get_retriever()
         
         self.llm = self._create_llm()
@@ -78,7 +68,6 @@ class RatoncitoAgent:
             return_intermediate_steps=False
         )
 
-    # --- CAMBIO: Herramientas totalmente rediseñadas ---
     def _create_tools(self) -> List[Tool]:
         """Crea la lista de herramientas simplificada que el agente puede usar."""
         return [
@@ -99,7 +88,6 @@ class RatoncitoAgent:
             )
         ]
 
-    # --- CAMBIO: Nueva función para la herramienta RAG ---
     def search_knowledge_base(self, query: str) -> str:
         """Busca en los documentos de Supabase (vía RAG) para responder la pregunta."""
         print(f"[*] RAG: Buscando documentos para la consulta: '{query}'")
@@ -108,7 +96,6 @@ class RatoncitoAgent:
             if not relevant_docs:
                 return "En mis documentos secretos no he encontrado nada sobre eso. Quizás podrías preguntarme sobre el Palacio Real o el Parque del Retiro, ¡de esos sitios sé muchísimos secretos!"
             
-            # Concatenamos el contenido de los documentos encontrados
             context = "\n---\n".join([doc.page_content for doc in relevant_docs])
             return f"He encontrado esta información en mis pergaminos secretos: {context}"
         except Exception as e:
@@ -127,7 +114,6 @@ class RatoncitoAgent:
         places = ["el Palacio Real", "el Parque del Retiro", "la Plaza Mayor", "la Puerta del Sol"]
         return f"¡Por supuesto! Madrid está lleno de magia. Podríamos empezar por explorar lugares como {', '.join(places)}. ¿Te gustaría que te contara algún secreto sobre alguno de ellos?"
 
-    # --- CAMBIO: Lógica de chat mejorada y más robusta ---
     def chat(self, message: str, context: ConversationContext) -> Dict[str, Any]:
         """
         Gestiona la conversación.

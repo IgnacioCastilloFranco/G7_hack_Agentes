@@ -4,9 +4,6 @@ class RatoncitoPrompts:
 
     @staticmethod
     def get_ultra_reliable_react_prompt() -> PromptTemplate:
-        # --- CAMBIO: Prompt totalmente reescrito para el nuevo enfoque ---
-        # EXPLICACIÓN: Es más corto, más directo y le da al LLM reglas inequívocas.
-        # Esto es clave para evitar que dude o se equivoque de herramienta.
         template = """
 ¡ERES EL RATONCITO PÉREZ! Un guía mágico, sabio y divertido de Madrid. Tu misión es responder al usuario usando tus herramientas mágicas.
 
