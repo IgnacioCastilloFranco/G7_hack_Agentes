@@ -9,18 +9,18 @@ load_dotenv()
 class Settings:
     # API Keys
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
+    # GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
     
     # Configuración del modelo LLM 
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")  
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")  
-    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.8")) 
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "Llama-3.3-70B-Versatile")  
+    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2")) 
     LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "1500"))  
     
     # Configuración del Agente
     AGENT_TYPE: str = os.getenv("AGENT_TYPE", "react")  
     AGENT_VERBOSE: bool = os.getenv("AGENT_VERBOSE", "true").lower() == "true"
-    AGENT_MAX_ITERATIONS: int = int(os.getenv("AGENT_MAX_ITERATIONS", "3"))
+    AGENT_MAX_ITERATIONS: int = int(os.getenv("AGENT_MAX_ITERATIONS", "4"))
     
     # Configuración del Ratoncito Pérez
     RATONCITO_PERSONALITY: str = os.getenv("RATONCITO_PERSONALITY", "magical_guide")
