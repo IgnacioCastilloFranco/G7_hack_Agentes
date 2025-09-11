@@ -97,7 +97,7 @@ def get_retriever():
 
     # Try to import embedding/vector store lazily. Fallback to dummy on failure.
     try:
-        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_community.vectorstores import FAISS
     except Exception as e:
         print("⚠️ Error importando embeddings/vectorstore:", e)
@@ -152,4 +152,4 @@ if __name__ == "__main__":
         print(f"Se encontraron {len(docs)} documentos relevantes:")
         for i, doc in enumerate(docs, 1):
             print(f"--- Documento {i} ---")
-            print(doc.page_content[:500])  
+            print(doc.page_content[:500])

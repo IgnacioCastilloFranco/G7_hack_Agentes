@@ -3,7 +3,10 @@ from typing import List, Dict, Any
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_groq import ChatGroq
 from langchain.tools import Tool
-from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.memory import BaseMemory
+from langchain.schema import BaseMessage
+from typing import Any, Dict, List
 from app.core.config import settings
 from app.utils.ratoncito_prompts import RatoncitoPrompts
 from app.services.knowledge import get_retriever
@@ -54,8 +57,15 @@ class RatoncitoAgent:
             model_name=settings.LLM_MODEL
         )
 
-    def _create_memory(self) -> ConversationBufferMemory:
-        return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    def _create_memory(self) -> BaseMemory:
+        # Using a simple approach to avoid deprecation warnings
+        from langchain.memory import ConversationBufferMemory
+        import warnings
+        
+        # Suppress the specific deprecation warning
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning, module="langchain")
+            return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
     def _create_agent_executor(self) -> AgentExecutor:
         return AgentExecutor(
